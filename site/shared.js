@@ -172,12 +172,13 @@ const SUPPORT = {
   ar: ["ادعم", "هل أعجبك AURA Switcher؟ ادعم التطوير بفنجان قهوة."],
   hi: ["सहयोग करें", "AURA Switcher पसंद आया? एक कॉफ़ी से विकास में सहयोग करें।"],
   ko: ["후원하기", "AURA Switcher가 마음에 드시나요? 커피 한 잔으로 개발을 후원해 주세요."],
+  zh: ["赞助", "喜欢 AURA Switcher 吗？请开发者喝杯咖啡以支持后续开发。"],
 };
 for (const k in SUPPORT) if (T[k]) { T[k].donate = SUPPORT[k][0]; T[k].supportP = SUPPORT[k][1]; }
 // contact link
 const CONTACT = { uk: "Написати нам", en: "Contact us", pl: "Napisz do nas", de: "Schreib uns", es: "Escríbenos", fr: "Nous écrire",
   it: "Scrivici", pt: "Fale connosco", tr: "Bize yazın", nl: "Mail ons", cs: "Napište nám", sv: "Skriv till oss", fi: "Kirjoita meille",
-  ro: "Scrie-ne", hu: "Írj nekünk", el: "Γράψτε μας", bg: "Пишете ни", he: "כתבו לנו", ar: "راسلنا", hi: "हमें लिखें", ko: "문의하기" };
+  ro: "Scrie-ne", hu: "Írj nekünk", el: "Γράψτε μας", bg: "Пишете ни", he: "כתבו לנו", ar: "راسلنا", hi: "हमें लिखें", ko: "문의하기", zh: "联系我们" };
 for (const k in CONTACT) if (T[k]) T[k].contact = CONTACT[k];
 // phones: what to do with the link
 const PHONE_NOTE = {"uk": "AURA — програма для комп'ютера (Mac і Windows). Надішліть посилання собі й відкрийте його на комп'ютері.",
@@ -200,7 +201,8 @@ const PHONE_NOTE = {"uk": "AURA — програма для комп'ютера 
   "he": "AURA היא תוכנה למחשב (Mac ו-Windows). שלחו לעצמכם את הקישור ופתחו אותו במחשב.",
   "ar": "AURA برنامج للكمبيوتر (Mac وWindows). أرسل الرابط إلى نفسك وافتحه على الكمبيوتر.",
   "hi": "AURA कंप्यूटर का ऐप है (Mac और Windows)। लिंक ख़ुद को भेजें और कंप्यूटर पर खोलें।",
-  "ko": "AURA는 컴퓨터용 프로그램입니다(Mac, Windows). 링크를 나에게 보내고 컴퓨터에서 여세요."};
+  "ko": "AURA는 컴퓨터용 프로그램입니다(Mac, Windows). 링크를 나에게 보내고 컴퓨터에서 여세요.",
+  "zh": "AURA 是电脑软件（Mac 和 Windows）。把链接发给自己，在电脑上打开。"};
 for (const k in PHONE_NOTE) if (T[k]) T[k].phoneNote = PHONE_NOTE[k];
 // phone visitors (nothing to install there) + "Is it safe?" block:
 // [phoneBtn, phoneCopied, safeH, safe1h, safe1p, safe2h, safe2p, safe3h, safe3p]
@@ -290,6 +292,7 @@ const EXTRA = {
        "안전한가요?", "오픈 소스", `모든 코드가 ${GH}에 있어 누구나 프로그램이 하는 일을 확인할 수 있습니다.`,
        "키보드 접근 권한이 필요한 이유", "입력한 단어를 보고 고치기 위해서입니다. 텍스트는 저장되거나 어디로도 전송되지 않으며 인터넷이 필요 없습니다.",
        "처음 실행할 때 경고가 뜨는 것은 정상입니다", "베타에는 아직 Apple과 Microsoft의 유료 서명이 없습니다. Mac: '완료' → 시스템 설정 → 개인정보 보호 및 보안 → '그래도 열기'. Windows: '추가 정보' → '실행'."],
+  zh: ["把链接发给自己", "链接已复制", "它安全吗？", "安全透明", `所有源代码均托管在 ${GH} 上，任何人都可以审查代码。`, "为什么它需要键盘访问权限", "仅用于识别你输入的文本并进行纠错。软件不会保存或向任何地方发送输入内容，且应用本身无需联网。", "首次启动时提示安全警告是正常现象", "测试版尚未购买昂贵的 Apple 或 Microsoft 开发者签名证书。Mac：点击“好” → 系统设置 → 隐私与安全性 → 点击“仍要打开”。Windows：点击“更多信息” → “仍要运行”。"],
 };
 const EXTRA_KEYS = ["phoneBtn", "phoneCopied", "safeH", "safe1h", "safe1p", "safe2h", "safe2p", "safe3h", "safe3p"];
 for (const k in T) { const e = EXTRA[k] || EXTRA.en; EXTRA_KEYS.forEach((key, i) => T[k][key] = e[i]); }
@@ -317,6 +320,7 @@ const MENU = {
   ar: ["مفعّل", "التصحيح التلقائي", "الصوت", "التطبيق: ", "لا تعمل في هذا التطبيق", "لغة هذا التطبيق", "الاستثناءات", "ربط اللغات"],
   hi: ["चालू", "स्वतः सुधार", "ध्वनि", "ऐप: ", "इस ऐप में काम न करें", "इस ऐप की भाषा", "अपवाद", "भाषा बंधन"],
   ko: ["켜기", "자동 수정", "소리", "앱: ", "이 앱에서 작동 안 함", "이 앱의 언어", "예외", "언어 지정"],
+  zh: ["已启用", "自动纠错", "音效", "应用： ", "不在该应用中启用", "此应用语言", "不生效应用列表", "语言绑定"],
 };
 for (const k in T) { const e = MENU[k] || MENU.en; MENU_KEYS.forEach((key, i) => T[k][key] = e[i]); }
 if (typeof SEO !== "undefined") for (const k in SEO) if (T[k]) Object.assign(T[k], SEO[k]);  // seo.js: title, description, "alternative to…"

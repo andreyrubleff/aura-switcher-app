@@ -84,4 +84,8 @@ const SEO = {
     desc: "키보드 자판 자동 전환: 잘못된 자판으로 입력한 단어를 스페이스 후 바로 고쳐 줍니다. Punto Switcher·Caramba Switcher의 무료 오픈 소스 대안, macOS와 Windows 지원.",
     altH: "무료 Punto Switcher 대안",
     altP: "Punto Switcher나 Caramba Switcher를 대체할 프로그램을 찾고 있나요? AURA Switcher는 잘못된 자판으로 입력한 글을 알아채고 자동으로 고쳐 줍니다 — 무료, 오픈 소스, 광고 없음, 인터넷으로 아무것도 보내지 않습니다. macOS와 Windows용." },
+  zh: { title: "AURA Switcher — 适用于 Mac 和 Windows 的免费 Punto Switcher 替代方案",
+    desc: "自动键盘布局切换工具：在按下空格后立即纠正用错布局的输入内容。适用于 macOS 和 Windows，是 Punto Switcher、Caramba Switcher 以及 Mahou 的免费开源替代品。",
+    altH: "免费的 Punto Switcher 替代方案",
+    altP: "正在寻找 Punto Switcher、Caramba Switcher、Mahou 或 LayoutFox 的替代品吗？AURA Switcher 能自动检测并纠正用错布局的键盘输入 — 完全免费、开源、无广告，且绝不上报任何数据。支持 macOS 和 Windows，适配 21 种语言。" },
 };
