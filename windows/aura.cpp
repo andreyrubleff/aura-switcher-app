@@ -744,8 +744,13 @@ static void onDoubleShift(Snapshot* s) {
     if (layouts.empty()) return;
     playSound(sndShift);
     if (!s->keys.empty()) {
+        // first press: the most likely layout (as auto-correction would pick it), then the next ones in turn
+        static vector<Key> lastCycled;
+        bool first = !(s->keys == lastCycled);
+        lastCycled = s->keys;
+        int best = first ? autoFixTarget(s->keys) : -1;
         const Layout& cur = layouts[layoutIndex(fgLayout())];
-        const Layout& n = layouts[(layoutIndex(fgLayout()) + 1) % layouts.size()];
+        const Layout& n = layouts[best >= 0 ? best : (layoutIndex(fgLayout()) + 1) % layouts.size()];
         replaceText(int(cur.text(s->keys).size()) + s->trailing, n.text(s->keys) + wstring(s->trailing, L' '));
         selectLayout(n);
         return;

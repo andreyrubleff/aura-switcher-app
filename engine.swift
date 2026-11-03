@@ -574,8 +574,14 @@ final class Engine {
 
     func cycleLayout() { if let n = next(after: currentLang()) { select(n) } }
 
+    /// the word the last double ⇧ converted: pressing again keeps cycling through the layouts
+    var lastCycled: [Key] = []
+
     func cycleWord(_ keys: [Key], trailing: Int) {
-        guard let n = next(after: currentLang()) else { return }
+        // first press: the most likely layout (as auto-correction would pick it), then the next ones in turn
+        let first = keys != lastCycled
+        lastCycled = keys
+        guard let n = (first ? autoFix(keys) : nil) ?? next(after: currentLang()) else { return }
         let shown = typedLayout(keys)?.text(keys).count ?? keys.count
         replace(count: shown + trailing, with: n.text(keys) + String(repeating: " ", count: trailing))
         select(n)
