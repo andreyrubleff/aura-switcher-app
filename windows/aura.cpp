@@ -745,12 +745,15 @@ static void onDoubleShift(Snapshot* s) {
     playSound(sndShift);
     if (!s->keys.empty()) {
         // first press: the most likely layout (as auto-correction would pick it), then the next ones in turn
-        static vector<Key> lastCycled;
-        bool first = !(s->keys == lastCycled);
-        lastCycled = s->keys;
-        int best = first ? autoFixTarget(s->keys) : -1;
-        const Layout& cur = layouts[layoutIndex(fgLayout())];
-        const Layout& n = layouts[best >= 0 ? best : (layoutIndex(fgLayout()) + 1) % layouts.size()];
+        // remember where the word went ourselves: right after a switch the window may still report the old layout
+        static vector<Key> lastCycled; static int lastIdx = -1;
+        bool again = s->keys == lastCycled && lastIdx >= 0 && lastIdx < int(layouts.size());
+        int curIdx = again ? lastIdx : layoutIndex(fgLayout());
+        int best = again ? -1 : autoFixTarget(s->keys);
+        int nIdx = best >= 0 ? best : (curIdx + 1) % int(layouts.size());
+        lastCycled = s->keys; lastIdx = nIdx;
+        const Layout& cur = layouts[curIdx];
+        const Layout& n = layouts[nIdx];
         replaceText(int(cur.text(s->keys).size()) + s->trailing, n.text(s->keys) + wstring(s->trailing, L' '));
         selectLayout(n);
         return;
