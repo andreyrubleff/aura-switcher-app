@@ -11,7 +11,7 @@ rm -rf build && mkdir -p build/x64 build/arm64 ../dist
 for T in x86_64:x64 aarch64:arm64; do
   "$ZIG" c++ -target ${T%%:*}-windows-gnu -O2 -s -std=c++17 -municode -Wl,--subsystem,windows -DBUILD_TIME=$(date +%s) \
     aura.cpp aura.rc -o "build/${T##*:}/$NAME.exe" \
-    -lole32 -lwinmm -luser32 -lshell32 -lgdi32 -ladvapi32 -static
+    -lole32 -lwinmm -luser32 -lshell32 -lgdi32 -ladvapi32 -lwinhttp -lbcrypt -lcomctl32 -static
 done
 rm -f build/*/*.pdb(N)
 # one archive per architecture for users: one folder, one exe, install notes
@@ -26,6 +26,8 @@ z=zipfile.ZipFile(sys.argv[1],"w",zipfile.ZIP_DEFLATED,compresslevel=9)
 for r,_,fs in os.walk(sys.argv[2]):
   for f in sorted(fs): z.write(os.path.join(r,f))
 z.close()' ../../$OUT "$NAME")
+  # the bare exe too: «Check for updates» downloads it (update.json has its SHA-256)
+  cp "build/$A/$NAME.exe" ../dist/$FILE-windows-$A.exe
   echo "dist/$FILE-$VERSION-windows-$A.zip"
 done
 rm -rf build

@@ -53,6 +53,7 @@ def finish(dom, canonical, rel):
     return dom
 
 for a in ASSETS: shutil.copy(SRC / a, out)
+if (SRC / "update.json").exists(): shutil.copy(SRC / "update.json", out)   # «Check for updates» in the apps (tools/update_manifest.py)
 (out / "update").mkdir(exist_ok=True)  # update page (opened from the app's menu): not pre-rendered, not in the sitemap
 shutil.copy(SRC / "update" / "index.html", out / "update" / "index.html")
 (out / "privacy").mkdir(exist_ok=True)  # privacy policy (linked from the Microsoft Store listing)

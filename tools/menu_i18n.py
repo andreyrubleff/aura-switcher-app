@@ -8,7 +8,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 KEYS = ["enabled", "auto", "sound", "access", "app", "exclude", "game", "appLang", "noBinding", "exclusions", "recent",
         "bindings", "empty", "login", "words", "wordsTitle", "wordsInfo", "save", "cancel", "uiLang", "system", "hint",
-        "report", "reportBody", "update", "updateDue", "donate", "quit"]
+        "report", "reportBody", "update", "updateDue", "donate", "quit", "updNew", "updLatest", "updNotes", "updNow", "updLater", "updFail"]
 # code, native name, then one line per key (in KEYS order)
 LANGS = """
 en English
@@ -40,6 +40,12 @@ Check for updates…
 ⬆︎ An update may be available — check
 Support AURA Switcher ☕
 Quit
+AURA Switcher {v} is out
+You have the latest version
+What's new
+Update
+Later
+Couldn't update automatically. Open the website to download it?
 
 uk Українська
 Увімкнено
@@ -70,6 +76,12 @@ AURA Switcher — мої слова
 ⬆︎ Можливо, вийшло оновлення — перевірити
 Підтримати AURA Switcher ☕
 Вихід
+Вийшла AURA Switcher {v}
+У вас остання версія
+Що нового
+Оновити
+Пізніше
+Не вдалося оновити автоматично. Відкрити сайт, щоб завантажити?
 
 pl Polski
 Włączone
@@ -100,6 +112,12 @@ Sprawdź aktualizacje…
 ⬆︎ Może być dostępna aktualizacja — sprawdź
 Wesprzyj AURA Switcher ☕
 Zakończ
+Wyszła AURA Switcher {v}
+Masz najnowszą wersję
+Co nowego
+Aktualizuj
+Później
+Nie udało się zaktualizować automatycznie. Otworzyć stronę, aby pobrać?
 
 de Deutsch
 Aktiviert
@@ -130,6 +148,12 @@ Nach Updates suchen…
 ⬆︎ Möglicherweise gibt es ein Update — prüfen
 AURA Switcher unterstützen ☕
 Beenden
+AURA Switcher {v} ist da
+Du hast die neueste Version
+Was ist neu
+Aktualisieren
+Später
+Automatisches Update fehlgeschlagen. Website zum Herunterladen öffnen?
 
 es Español
 Activado
@@ -160,6 +184,12 @@ Buscar actualizaciones…
 ⬆︎ Puede haber una actualización — comprobar
 Apoyar AURA Switcher ☕
 Salir
+Ya está aquí AURA Switcher {v}
+Tienes la última versión
+Novedades
+Actualizar
+Más tarde
+No se pudo actualizar automáticamente. ¿Abrir la web para descargarla?
 
 fr Français
 Activé
@@ -190,6 +220,12 @@ Rechercher des mises à jour…
 ⬆︎ Une mise à jour est peut-être disponible — vérifier
 Soutenir AURA Switcher ☕
 Quitter
+AURA Switcher {v} est sortie
+Vous avez la dernière version
+Nouveautés
+Mettre à jour
+Plus tard
+Mise à jour automatique impossible. Ouvrir le site pour la télécharger ?
 
 it Italiano
 Attivo
@@ -220,6 +256,12 @@ Controlla aggiornamenti…
 ⬆︎ Potrebbe esserci un aggiornamento — controlla
 Sostieni AURA Switcher ☕
 Esci
+È uscita AURA Switcher {v}
+Hai l’ultima versione
+Novità
+Aggiorna
+Più tardi
+Aggiornamento automatico non riuscito. Aprire il sito per scaricarla?
 
 pt Português
 Ativado
@@ -250,6 +292,12 @@ Procurar atualizações…
 ⬆︎ Pode haver uma atualização — verificar
 Apoiar o AURA Switcher ☕
 Sair
+Saiu o AURA Switcher {v}
+Tem a versão mais recente
+Novidades
+Atualizar
+Mais tarde
+Não foi possível atualizar automaticamente. Abrir o site para baixar?
 
 tr Türkçe
 Etkin
@@ -280,6 +328,12 @@ Güncellemeleri denetle…
 ⬆︎ Güncelleme olabilir — denetle
 AURA Switcher'ı destekle ☕
 Çık
+AURA Switcher {v} çıktı
+En son sürümü kullanıyorsunuz
+Yenilikler
+Güncelle
+Daha sonra
+Otomatik güncellenemedi. İndirmek için web sitesi açılsın mı?
 
 nl Nederlands
 Ingeschakeld
@@ -310,6 +364,12 @@ Zoek naar updates…
 ⬆︎ Er is misschien een update — controleren
 Steun AURA Switcher ☕
 Stop
+AURA Switcher {v} is uit
+Je hebt de nieuwste versie
+Wat is er nieuw
+Bijwerken
+Later
+Automatisch bijwerken is mislukt. De website openen om te downloaden?
 
 cs Čeština
 Zapnuto
@@ -340,6 +400,12 @@ Zkontrolovat aktualizace…
 ⬆︎ Možná je k dispozici aktualizace — zkontrolovat
 Podpořit AURA Switcher ☕
 Ukončit
+Vyšel AURA Switcher {v}
+Máte nejnovější verzi
+Co je nového
+Aktualizovat
+Později
+Automatická aktualizace se nezdařila. Otevřít web a stáhnout?
 
 sv Svenska
 Aktiverad
@@ -370,6 +436,12 @@ Sök efter uppdateringar…
 ⬆︎ Det kan finnas en uppdatering — kontrollera
 Stöd AURA Switcher ☕
 Avsluta
+AURA Switcher {v} är här
+Du har den senaste versionen
+Nyheter
+Uppdatera
+Senare
+Kunde inte uppdatera automatiskt. Öppna webbplatsen för att ladda ner?
 
 fi Suomi
 Käytössä
@@ -400,6 +472,12 @@ Tarkista päivitykset…
 ⬆︎ Päivitys saattaa olla saatavilla — tarkista
 Tue AURA Switcheriä ☕
 Lopeta
+AURA Switcher {v} on julkaistu
+Sinulla on uusin versio
+Uutta
+Päivitä
+Myöhemmin
+Automaattinen päivitys epäonnistui. Avataanko sivusto latausta varten?
 
 ro Română
 Activat
@@ -430,6 +508,12 @@ Caută actualizări…
 ⬆︎ Poate există o actualizare — verifică
 Susține AURA Switcher ☕
 Ieșire
+A apărut AURA Switcher {v}
+Ai cea mai nouă versiune
+Ce e nou
+Actualizează
+Mai târziu
+Actualizarea automată a eșuat. Deschizi site-ul pentru descărcare?
 
 hu Magyar
 Bekapcsolva
@@ -460,6 +544,12 @@ Frissítések keresése…
 ⬆︎ Lehet, hogy van frissítés — ellenőrzés
 Az AURA Switcher támogatása ☕
 Kilépés
+Megjelent az AURA Switcher {v}
+A legújabb verzió van nálad
+Újdonságok
+Frissítés
+Később
+Az automatikus frissítés nem sikerült. Megnyitod a weboldalt a letöltéshez?
 
 el Ελληνικά
 Ενεργό
@@ -490,6 +580,12 @@ AURA Switcher — οι λέξεις μου
 ⬆︎ Ίσως υπάρχει ενημέρωση — έλεγχος
 Υποστηρίξτε το AURA Switcher ☕
 Έξοδος
+Κυκλοφόρησε το AURA Switcher {v}
+Έχετε την τελευταία έκδοση
+Τι νέο υπάρχει
+Ενημέρωση
+Αργότερα
+Η αυτόματη ενημέρωση απέτυχε. Άνοιγμα του ιστότοπου για λήψη;
 
 bg Български
 Включено
@@ -520,6 +616,12 @@ AURA Switcher смята тези думи за правилни: никога �
 ⬆︎ Може да има актуализация — проверете
 Подкрепете AURA Switcher ☕
 Изход
+Излезе AURA Switcher {v}
+Имате най-новата версия
+Какво ново
+Обнови
+По-късно
+Автоматичното обновяване не успя. Да се отвори ли сайтът за изтегляне?
 
 he עברית
 מופעל
@@ -550,6 +652,12 @@ AURA Switcher מתייחס למילים אלה כנכונות: לעולם לא �
 ⬆︎ ייתכן שיש עדכון — בדיקה
 תמכו ב-AURA Switcher ☕
 יציאה
+יצאה AURA Switcher {v}
+יש לכם את הגרסה העדכנית
+מה חדש
+עדכן
+מאוחר יותר
+העדכון האוטומטי נכשל. לפתוח את האתר להורדה?
 
 ar العربية
 مفعّل
@@ -580,6 +688,12 @@ AURA Switcher — كلماتي
 ⬆︎ قد يتوفر تحديث — تحقّق
 ادعم AURA Switcher ☕
 إنهاء
+صدر AURA Switcher {v}
+لديك أحدث إصدار
+ما الجديد
+تحديث
+لاحقًا
+تعذّر التحديث تلقائيًا. هل تريد فتح الموقع للتنزيل؟
 
 hi हिन्दी
 चालू
@@ -610,6 +724,12 @@ AURA Switcher इन शब्दों को सही मानता है:
 ⬆︎ शायद नया अपडेट आया है — जाँचें
 AURA Switcher का समर्थन करें ☕
 बंद करें
+AURA Switcher {v} आ गया है
+आपके पास नवीनतम संस्करण है
+नया क्या है
+अपडेट करें
+बाद में
+अपने-आप अपडेट नहीं हो सका। डाउनलोड के लिए वेबसाइट खोलें?
 
 ko 한국어
 켜기
@@ -640,6 +760,12 @@ AURA Switcher는 이 단어들을 올바른 단어로 봅니다. 절대 바꾸�
 ⬆︎ 업데이트가 있을 수 있습니다 — 확인
 AURA Switcher 후원하기 ☕
 종료
+AURA Switcher {v} 출시
+최신 버전을 사용 중입니다
+새로운 기능
+업데이트
+나중에
+자동으로 업데이트하지 못했습니다. 다운로드하려면 웹사이트를 열까요?
 """
 
 langs = []  # (code, name, [strings])

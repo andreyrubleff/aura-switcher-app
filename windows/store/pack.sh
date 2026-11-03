@@ -12,7 +12,7 @@ for T in x86_64:x64 aarch64:arm64; do
   A=${T##*:}; D=build/$A
   mkdir -p $D/Assets && cp Assets/*.png $D/Assets/
   (cd .. && zig c++ -target ${T%%:*}-windows-gnu -O2 -s -std=c++17 -municode -Wl,--subsystem,windows -DBUILD_TIME=$(date +%s) \
-    aura.cpp aura.rc -o "store/$D/AURA Switcher.exe" -lole32 -lwinmm -luser32 -lshell32 -lgdi32 -ladvapi32 -static)
+    aura.cpp aura.rc -o "store/$D/AURA Switcher.exe" -lole32 -lwinmm -luser32 -lshell32 -lgdi32 -ladvapi32 -lwinhttp -lbcrypt -lcomctl32 -static)
   rm -f $D/*.pdb
   sed -e "s|@NAME@|$NAME|" -e "s|@PUBLISHER@|$PUBLISHER|" -e "s|@PUBLISHER_NAME@|$PUBLISHER_NAME|" \
       -e "s|@VERSION@|$VERSION.0.0|" -e "s|@ARCH@|$A|" AppxManifest.xml > $D/AppxManifest.xml

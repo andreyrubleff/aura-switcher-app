@@ -166,8 +166,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         add(m, L("hint"))
         add(m, updateDue() ? L("updateDue") : L("update")) {
             self.s.updateCheckedAt = Date().timeIntervalSince1970
-            NSWorkspace.shared.open(updatePageURL())
             self.updateTitle()
+            Updater.check()
         }
         add(m, L("report")) { self.reportProblem() }
         add(m, L("donate")) { NSWorkspace.shared.open(URL(string: "https://donatello.to/aura-switcher")!) }

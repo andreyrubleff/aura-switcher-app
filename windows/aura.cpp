@@ -14,6 +14,8 @@
 #endif
 #include <windows.h>
 #include <appmodel.h>
+#include <winhttp.h>
+#include <bcrypt.h>
 #include <shellapi.h>
 #include <objbase.h>
 #include <spellcheck.h>
@@ -40,7 +42,7 @@ using std::wstring;
 using std::vector;
 
 static const ULONG_PTR kMagic = 0x4B535754;  // marks our own synthetic input
-enum { WM_TRAY = WM_APP + 1, WM_AUTO, WM_DSHIFT };
+enum { WM_TRAY = WM_APP + 1, WM_AUTO, WM_DSHIFT, WM_UPDATE };
 enum { ID_ENABLED = 1, ID_AUTO, ID_SOUND, ID_WORDS, ID_DONATE, ID_REPORT, ID_UPDATE, ID_EXCLUDE, ID_NOBIND, ID_LOGIN, ID_UI_SYS, ID_QUIT,
        ID_BIND0 = 100, ID_EXDEL0 = 200, ID_BDDEL0 = 300, ID_RECENT0 = 400, ID_UI0 = 500 };
 
@@ -152,6 +154,12 @@ static const wchar_t* const UI_STR[][UI_N] = { // row: English first, then the o
     {L"⬆︎ An update may be available — check", L"⬆︎ Можливо, вийшло оновлення — перевірити", L"⬆︎ Może być dostępna aktualizacja — sprawdź", L"⬆︎ Möglicherweise gibt es ein Update — prüfen", L"⬆︎ Puede haber una actualización — comprobar", L"⬆︎ Une mise à jour est peut-être disponible — vérifier", L"⬆︎ Potrebbe esserci un aggiornamento — controlla", L"⬆︎ Pode haver uma atualização — verificar", L"⬆︎ Güncelleme olabilir — denetle", L"⬆︎ Er is misschien een update — controleren", L"⬆︎ Možná je k dispozici aktualizace — zkontrolovat", L"⬆︎ Det kan finnas en uppdatering — kontrollera", L"⬆︎ Päivitys saattaa olla saatavilla — tarkista", L"⬆︎ Poate există o actualizare — verifică", L"⬆︎ Lehet, hogy van frissítés — ellenőrzés", L"⬆︎ Ίσως υπάρχει ενημέρωση — έλεγχος", L"⬆︎ Може да има актуализация — проверете", L"⬆︎ ייתכן שיש עדכון — בדיקה", L"⬆︎ قد يتوفر تحديث — تحقّق", L"⬆︎ शायद नया अपडेट आया है — जाँचें", L"⬆︎ 업데이트가 있을 수 있습니다 — 확인"},
     {L"Support AURA Switcher ☕", L"Підтримати AURA Switcher ☕", L"Wesprzyj AURA Switcher ☕", L"AURA Switcher unterstützen ☕", L"Apoyar AURA Switcher ☕", L"Soutenir AURA Switcher ☕", L"Sostieni AURA Switcher ☕", L"Apoiar o AURA Switcher ☕", L"AURA Switcher'ı destekle ☕", L"Steun AURA Switcher ☕", L"Podpořit AURA Switcher ☕", L"Stöd AURA Switcher ☕", L"Tue AURA Switcheriä ☕", L"Susține AURA Switcher ☕", L"Az AURA Switcher támogatása ☕", L"Υποστηρίξτε το AURA Switcher ☕", L"Подкрепете AURA Switcher ☕", L"תמכו ב-AURA Switcher ☕", L"ادعم AURA Switcher ☕", L"AURA Switcher का समर्थन करें ☕", L"AURA Switcher 후원하기 ☕"},
     {L"Quit", L"Вихід", L"Zakończ", L"Beenden", L"Salir", L"Quitter", L"Esci", L"Sair", L"Çık", L"Stop", L"Ukončit", L"Avsluta", L"Lopeta", L"Ieșire", L"Kilépés", L"Έξοδος", L"Изход", L"יציאה", L"إنهاء", L"बंद करें", L"종료"},
+    {L"AURA Switcher {v} is out", L"Вийшла AURA Switcher {v}", L"Wyszła AURA Switcher {v}", L"AURA Switcher {v} ist da", L"Ya está aquí AURA Switcher {v}", L"AURA Switcher {v} est sortie", L"È uscita AURA Switcher {v}", L"Saiu o AURA Switcher {v}", L"AURA Switcher {v} çıktı", L"AURA Switcher {v} is uit", L"Vyšel AURA Switcher {v}", L"AURA Switcher {v} är här", L"AURA Switcher {v} on julkaistu", L"A apărut AURA Switcher {v}", L"Megjelent az AURA Switcher {v}", L"Κυκλοφόρησε το AURA Switcher {v}", L"Излезе AURA Switcher {v}", L"יצאה AURA Switcher {v}", L"صدر AURA Switcher {v}", L"AURA Switcher {v} आ गया है", L"AURA Switcher {v} 출시"},
+    {L"You have the latest version", L"У вас остання версія", L"Masz najnowszą wersję", L"Du hast die neueste Version", L"Tienes la última versión", L"Vous avez la dernière version", L"Hai l’ultima versione", L"Tem a versão mais recente", L"En son sürümü kullanıyorsunuz", L"Je hebt de nieuwste versie", L"Máte nejnovější verzi", L"Du har den senaste versionen", L"Sinulla on uusin versio", L"Ai cea mai nouă versiune", L"A legújabb verzió van nálad", L"Έχετε την τελευταία έκδοση", L"Имате най-новата версия", L"יש לכם את הגרסה העדכנית", L"لديك أحدث إصدار", L"आपके पास नवीनतम संस्करण है", L"최신 버전을 사용 중입니다"},
+    {L"What's new", L"Що нового", L"Co nowego", L"Was ist neu", L"Novedades", L"Nouveautés", L"Novità", L"Novidades", L"Yenilikler", L"Wat is er nieuw", L"Co je nového", L"Nyheter", L"Uutta", L"Ce e nou", L"Újdonságok", L"Τι νέο υπάρχει", L"Какво ново", L"מה חדש", L"ما الجديد", L"नया क्या है", L"새로운 기능"},
+    {L"Update", L"Оновити", L"Aktualizuj", L"Aktualisieren", L"Actualizar", L"Mettre à jour", L"Aggiorna", L"Atualizar", L"Güncelle", L"Bijwerken", L"Aktualizovat", L"Uppdatera", L"Päivitä", L"Actualizează", L"Frissítés", L"Ενημέρωση", L"Обнови", L"עדכן", L"تحديث", L"अपडेट करें", L"업데이트"},
+    {L"Later", L"Пізніше", L"Później", L"Später", L"Más tarde", L"Plus tard", L"Più tardi", L"Mais tarde", L"Daha sonra", L"Later", L"Později", L"Senare", L"Myöhemmin", L"Mai târziu", L"Később", L"Αργότερα", L"По-късно", L"מאוחר יותר", L"لاحقًا", L"बाद में", L"나중에"},
+    {L"Couldn't update automatically. Open the website to download it?", L"Не вдалося оновити автоматично. Відкрити сайт, щоб завантажити?", L"Nie udało się zaktualizować automatycznie. Otworzyć stronę, aby pobrać?", L"Automatisches Update fehlgeschlagen. Website zum Herunterladen öffnen?", L"No se pudo actualizar automáticamente. ¿Abrir la web para descargarla?", L"Mise à jour automatique impossible. Ouvrir le site pour la télécharger ?", L"Aggiornamento automatico non riuscito. Aprire il sito per scaricarla?", L"Não foi possível atualizar automaticamente. Abrir o site para baixar?", L"Otomatik güncellenemedi. İndirmek için web sitesi açılsın mı?", L"Automatisch bijwerken is mislukt. De website openen om te downloaden?", L"Automatická aktualizace se nezdařila. Otevřít web a stáhnout?", L"Kunde inte uppdatera automatiskt. Öppna webbplatsen för att ladda ner?", L"Automaattinen päivitys epäonnistui. Avataanko sivusto latausta varten?", L"Actualizarea automată a eșuat. Deschizi site-ul pentru descărcare?", L"Az automatikus frissítés nem sikerült. Megnyitod a weboldalt a letöltéshez?", L"Η αυτόματη ενημέρωση απέτυχε. Άνοιγμα του ιστότοπου για λήψη;", L"Автоматичното обновяване не успя. Да се отвори ли сайтът за изтегляне?", L"העדכון האוטומטי נכשל. לפתוח את האתר להורדה?", L"تعذّر التحديث تلقائيًا. هل تريد فتح الموقع للتنزيل؟", L"अपने-आप अपडेट नहीं हो सका। डाउनलोड के लिए वेबसाइट खोलें?", L"자동으로 업데이트하지 못했습니다. 다운로드하려면 웹사이트를 열까요?"},
 };
 // END menu strings
 
@@ -854,6 +862,115 @@ static void setLogin(bool on) {
     RegCloseKey(k);
 }
 
+// MARK: - Update in one click
+// Only when the user clicks «Check for updates…», never in the background: read the site's update.json,
+// download this architecture's exe from GitHub Releases, check its SHA-256 against update.json, put it in
+// place of this exe (a running exe can be renamed) and start it. Anything goes wrong → the site's update page.
+#if defined(__aarch64__) || defined(_M_ARM64)
+static const char* kUpdArch = "win-arm64";
+#else
+static const char* kUpdArch = "win-x64";
+#endif
+static HANDLE instanceMutex = nullptr;
+struct UpdateInfo { std::string version, url, sha256; bool ok = false; };
+
+static bool httpGet(const wstring& url, std::string& out) {
+    URL_COMPONENTS u = {sizeof(u)}; wchar_t host[256], path[2048];
+    u.lpszHostName = host; u.dwHostNameLength = 256; u.lpszUrlPath = path; u.dwUrlPathLength = 2048;
+    if (!WinHttpCrackUrl(url.c_str(), 0, 0, &u)) return false;
+    HINTERNET s = WinHttpOpen(L"AURA Switcher/" APP_VERSION, WINHTTP_ACCESS_TYPE_AUTOMATIC_PROXY, nullptr, nullptr, 0);
+    HINTERNET c = s ? WinHttpConnect(s, host, u.nPort, 0) : nullptr;
+    HINTERNET r = c ? WinHttpOpenRequest(c, L"GET", path, nullptr, WINHTTP_NO_REFERER, WINHTTP_DEFAULT_ACCEPT_TYPES, WINHTTP_FLAG_SECURE) : nullptr;
+    bool ok = r && WinHttpSendRequest(r, nullptr, 0, nullptr, 0, 0, 0) && WinHttpReceiveResponse(r, nullptr);
+    DWORD status = 0, len = sizeof(status);
+    if (ok) ok = WinHttpQueryHeaders(r, WINHTTP_QUERY_STATUS_CODE | WINHTTP_QUERY_FLAG_NUMBER, nullptr, &status, &len, nullptr) && status == 200;
+    out.clear();
+    for (DWORD n = 0; ok && WinHttpQueryDataAvailable(r, &n) && n; ) {
+        size_t at = out.size(); out.resize(at + n); DWORD got = 0;
+        if (!WinHttpReadData(r, &out[at], n, &got)) ok = false;
+        out.resize(at + got);
+    }
+    if (r) WinHttpCloseHandle(r); if (c) WinHttpCloseHandle(c); if (s) WinHttpCloseHandle(s);
+    return ok;
+}
+// "key":"value" right after `after` (the manifest is ours and flat — no JSON library needed)
+static std::string jsonStr(const std::string& j, const std::string& key, size_t after = 0) {
+    size_t k = j.find("\"" + key + "\"", after); if (k == std::string::npos) return "";
+    size_t a = j.find('"', j.find(':', k) + 1); size_t b = a == std::string::npos ? a : j.find('"', a + 1);
+    return b == std::string::npos ? "" : j.substr(a + 1, b - a - 1);
+}
+static bool newerVersion(const std::string& a, const std::string& b) {
+    int x[4] = {}, y[4] = {}; sscanf(a.c_str(), "%d.%d.%d.%d", x, x + 1, x + 2, x + 3); sscanf(b.c_str(), "%d.%d.%d.%d", y, y + 1, y + 2, y + 3);
+    for (int i = 0; i < 4; i++) if (x[i] != y[i]) return x[i] > y[i];
+    return false;
+}
+static std::string sha256hex(const std::string& data) {
+    BCRYPT_ALG_HANDLE alg; UCHAR h[32]; std::string r;
+    if (BCryptOpenAlgorithmProvider(&alg, BCRYPT_SHA256_ALGORITHM, nullptr, 0)) return r;
+    BCryptHash(alg, nullptr, 0, (PUCHAR)data.data(), ULONG(data.size()), h, 32);
+    BCryptCloseAlgorithmProvider(alg, 0);
+    char b[3]; for (UCHAR c : h) { snprintf(b, 3, "%02x", c); r += b; }
+    return r;
+}
+static DWORD WINAPI updateCheckThread(LPVOID) {
+    auto* u = new UpdateInfo; std::string j;
+    if (httpGet(L"https://klbk.github.io/aura-switcher/update.json", j)) {
+        size_t sec = j.find(std::string("\"") + kUpdArch + "\"");
+        u->version = jsonStr(j, "version");
+        if (sec != std::string::npos) { u->url = jsonStr(j, "url", sec); u->sha256 = jsonStr(j, "sha256", sec); }
+        u->ok = !u->version.empty() && !u->url.empty() && u->sha256.size() == 64;
+    }
+    PostMessageW(hwndMain, WM_UPDATE, 0, (LPARAM)u);
+    return 0;
+}
+static void openUpdatePage() {
+    wstring url = wstring(L"https://klbk.github.io/aura-switcher/update/?v=" APP_VERSION L"&l=") + UI_LANGS[uiIndex()];
+    ShellExecuteW(nullptr, L"open", url.c_str(), nullptr, nullptr, SW_SHOWNORMAL);
+}
+static int askButtons(const wstring& text, std::initializer_list<const wchar_t*> buttons) {
+    std::vector<TASKDIALOG_BUTTON> b; int id = 100; for (auto t : buttons) b.push_back({id++, t});
+    TASKDIALOGCONFIG c = {sizeof(c)}; c.hwndParent = hwndMain; c.pszWindowTitle = L"AURA Switcher";
+    c.pszMainInstruction = text.c_str(); c.pButtons = b.data(); c.cButtons = UINT(b.size()); c.dwFlags = TDF_POSITION_RELATIVE_TO_WINDOW;
+    int pressed = 0; SetForegroundWindow(hwndMain);
+    return SUCCEEDED(TaskDialogIndirect(&c, &pressed, nullptr, nullptr)) ? pressed - 100 : -1;
+}
+static void updateFailed() {
+    if (askButtons(L_(L"Couldn't update automatically. Open the website to download it?", L"Не вдалося оновити автоматично. Відкрити сайт, щоб завантажити?"),
+                   {L"OK", L_(L"Later", L"Пізніше")}) == 0) openUpdatePage();
+}
+static bool installUpdate(const UpdateInfo& u) {
+    std::string data;
+    if (!httpGet(wstring(u.url.begin(), u.url.end()), data) || data.size() < 100000 || sha256hex(data) != u.sha256) return false;
+    wchar_t self[MAX_PATH]; GetModuleFileNameW(nullptr, self, MAX_PATH);
+    wstring exe = self, fresh = exe + L".new", old = exe + L".old";
+    HANDLE f = CreateFileW(fresh.c_str(), GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS, 0, nullptr);
+    if (f == INVALID_HANDLE_VALUE) return false;
+    DWORD w = 0; bool ok = WriteFile(f, data.data(), DWORD(data.size()), &w, nullptr) && w == data.size(); CloseHandle(f);
+    if (!ok || !MoveFileExW(exe.c_str(), old.c_str(), MOVEFILE_REPLACE_EXISTING)) { DeleteFileW(fresh.c_str()); return false; }
+    if (!MoveFileExW(fresh.c_str(), exe.c_str(), 0)) { MoveFileExW(old.c_str(), exe.c_str(), 0); return false; }
+    if (instanceMutex) { CloseHandle(instanceMutex); instanceMutex = nullptr; }   // let the new copy start
+    STARTUPINFOW si = {sizeof(si)}; PROCESS_INFORMATION pi;
+    if (!CreateProcessW(exe.c_str(), nullptr, nullptr, nullptr, FALSE, 0, nullptr, nullptr, &si, &pi)) return false;
+    CloseHandle(pi.hThread); CloseHandle(pi.hProcess);
+    return true;
+}
+static void onUpdateInfo(UpdateInfo* u) {
+    std::unique_ptr<UpdateInfo> keep(u);
+    if (!u->ok) return updateFailed();
+    std::string cur; for (const wchar_t* p = APP_VERSION; *p; p++) cur += char(*p);
+    if (!newerVersion(u->version, cur)) {
+        askButtons(L_(L"You have the latest version", L"У вас остання версія"), {L"OK"});
+        return;
+    }
+    wstring msg = L_(L"AURA Switcher {v} is out", L"Вийшла AURA Switcher {v}");
+    size_t at = msg.find(L"{v}"); if (at != wstring::npos) msg.replace(at, 3, wstring(u->version.begin(), u->version.end()));
+    int b = askButtons(msg, {L_(L"Update", L"Оновити"), L_(L"What's new", L"Що нового"), L_(L"Later", L"Пізніше")});
+    if (b == 1) openUpdatePage();
+    if (b != 0) return;
+    if (installUpdate(*u)) PostQuitMessage(0);
+    else updateFailed();
+}
+
 // MARK: - Menu
 
 // empty submenu: tell where it gets filled — «Порожньо — ↑ «Не працювати в цій програмі»»
@@ -1037,8 +1154,7 @@ static void showMenu() {
     else if (cmd == ID_REPORT) reportProblem();
     else if (cmd == ID_UPDATE) {
         updateChecked = (long long)time(nullptr); regSet(L"updateChecked", std::to_wstring(updateChecked));
-        wstring url = wstring(L"https://klbk.github.io/aura-switcher/update/?v=" APP_VERSION L"&l=") + UI_LANGS[uiIndex()];
-        ShellExecuteW(nullptr, L"open", url.c_str(), nullptr, nullptr, SW_SHOWNORMAL);
+        CloseHandle(CreateThread(nullptr, 0, updateCheckThread, nullptr, 0, nullptr));
     }
     else if (cmd == ID_DONATE) ShellExecuteW(nullptr, L"open", L"https://donatello.to/aura-switcher", nullptr, nullptr, SW_SHOWNORMAL);
     else if (cmd == ID_UI_SYS) S.uiLang = L"";
@@ -1125,6 +1241,7 @@ static LRESULT CALLBACK wndProc(HWND h, UINT msg, WPARAM wp, LPARAM lp) {
         return 0;
     case WM_AUTO: { auto* s = (Snapshot*)lp; if (active) onAuto(s); delete s; return 0; }
     case WM_DSHIFT: { auto* s = (Snapshot*)lp; if (active) onDoubleShift(s); delete s; return 0; }
+    case WM_UPDATE: onUpdateInfo((UpdateInfo*)lp); return 0;
     case WM_TIMER:
         if (wp == TIMER_LATE_CLIP) {
             KillTimer(h, TIMER_LATE_CLIP);
@@ -1148,8 +1265,12 @@ static LRESULT CALLBACK wndProc(HWND h, UINT msg, WPARAM wp, LPARAM lp) {
 #ifndef AURA_TEST  // tests/windows.cpp includes this file with its own main
 int WINAPI wWinMain(HINSTANCE inst, HINSTANCE, PWSTR, int) {
     // single instance: a second copy would double every correction
-    CreateMutexW(nullptr, TRUE, L"Local\\AURA-single-instance");
+    instanceMutex = CreateMutexW(nullptr, TRUE, L"Local\\AURA-single-instance");
     if (GetLastError() == ERROR_ALREADY_EXISTS) return 0;
+    {   // left over from an update: the previous exe
+        wchar_t self[MAX_PATH]; GetModuleFileNameW(nullptr, self, MAX_PATH);
+        DeleteFileW((wstring(self) + L".old").c_str());
+    }
 
     CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
     CoCreateInstance(__uuidof(SpellCheckerFactory), nullptr, CLSCTX_INPROC_SERVER, __uuidof(ISpellCheckerFactory), (void**)&factory);
