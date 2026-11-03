@@ -405,9 +405,23 @@ final class Engine {
     // unless it is already a word where it was typed (English «a»)
     static let letterWords = ["uk": "авзіїоуйя", "ru": "авжикосуя", "en": "ai"]
 
+    /// «b tot» = «и еще»: «tot» is an English word, so alone it stays; but «b» isn't a word in English and
+    /// «и» is in Russian, where «еще» is a real word too — the pair says which language was meant
+    func pairFix(_ keys: [Key], before: [Key]) -> Layout? {
+        guard before.count == 1, let src = typedLayout(keys) else { return nil }
+        let bTyped = src.text(before)
+        guard Engine.letterWords[src.lang]?.contains(bTyped.lowercased()) != true else { return nil }
+        for l in layouts where l.lang != src.lang && l.maps(keys) && l.maps(before) {
+            let b = l.text(before), t = l.text(keys)
+            guard Engine.letterWords[l.lang]?.contains(b.lowercased()) == true, !consonantRun(t) else { continue }
+            if dictionaryWorks(l.lang) ? isWord(t, l.lang) : model(l.lang)?.has(t) == true { return l }
+        }
+        return nil
+    }
+
     func autoCorrect(_ keys: [Key], before: [Key] = []) {
         // user kept typing meanwhile — skip
-        guard lastWord == keys, word.isEmpty, trailing == 1, let fix = autoFix(keys) else { return }
+        guard lastWord == keys, word.isEmpty, trailing == 1, let fix = autoFix(keys) ?? pairFix(keys, before: before) else { return }
         let out = fix.text(keys)
         let src = typedLayout(keys), typed = src?.text(keys)
         let b = fix.text(before), bTyped = src?.text(before) ?? ""

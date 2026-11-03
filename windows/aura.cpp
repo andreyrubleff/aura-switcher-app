@@ -773,9 +773,26 @@ static bool isLetterWord(const wstring& c, const wstring& locale) {
     return c.size() == 1 && it != w.end() && it->second.find(wchar_t(UINT_PTR(CharLowerW(LPWSTR(UINT_PTR(c[0])))))) != wstring::npos;
 }
 
+// «b tot» = «и еще»: «tot» is an English word, so alone it stays; but «b» isn't a word in English and
+// «и» is in Russian, where «еще» is a real word too — the pair says which language was meant
+static int pairFixTarget(const vector<Key>& keys, const vector<Key>& before) {
+    if (before.size() != 1 || layouts.empty()) return -1;
+    int cur = layoutIndex(fgLayout());
+    if (isLetterWord(layouts[cur].text(before), layouts[cur].locale)) return -1;
+    for (size_t j = 0; j < layouts.size(); j++) {
+        if (int(j) == cur || !layouts[j].maps(keys) || !layouts[j].maps(before)) continue;
+        wstring b = layouts[j].text(before), t = layouts[j].text(keys);
+        if (!isLetterWord(b, layouts[j].locale) || consonantRun(t)) continue;
+        const LangModel* lm = model(layouts[j].locale);
+        if (dictionaryWorks(layouts[j].locale) ? isWord(t, layouts[j].locale) : (lm && lm->has(t))) return int(j);
+    }
+    return -1;
+}
+
 static void onAuto(Snapshot* s) {
     if (!S.autoFix || S.bindings.count(fgExe())) return;
     int j = autoFixTarget(s->keys);
+    if (j < 0) j = pairFixTarget(s->keys, s->before);
     if (j < 0 || seq.load() != s->seq) return;  // user kept typing meanwhile — skip
     wstring out = layouts[j].text(s->keys);
     const Layout& cur = layouts[layoutIndex(fgLayout())];
