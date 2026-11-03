@@ -745,13 +745,14 @@ static void onDoubleShift(Snapshot* s) {
     playSound(sndShift);
     if (!s->keys.empty()) {
         // first press: the most likely layout (as auto-correction would pick it), then the next ones in turn
-        // remember where the word went ourselves: right after a switch the window may still report the old layout
-        static vector<Key> lastCycled; static int lastIdx = -1;
-        bool again = s->keys == lastCycled && lastIdx >= 0 && lastIdx < int(layouts.size());
+        // remember where the word went ourselves: right after a switch the window may still report the old layout.
+        // «Again» = no real key since the previous double ⇧ (the hook's key counter didn't move)
+        static unsigned lastSeq = ~0u; static int lastIdx = -1;
+        bool again = s->seq == lastSeq && lastIdx >= 0 && lastIdx < int(layouts.size());
         int curIdx = again ? lastIdx : layoutIndex(fgLayout());
         int best = again ? -1 : autoFixTarget(s->keys);
         int nIdx = best >= 0 ? best : (curIdx + 1) % int(layouts.size());
-        lastCycled = s->keys; lastIdx = nIdx;
+        lastSeq = s->seq; lastIdx = nIdx;
         const Layout& cur = layouts[curIdx];
         const Layout& n = layouts[nIdx];
         replaceText(int(cur.text(s->keys).size()) + s->trailing, n.text(s->keys) + wstring(s->trailing, L' '));
