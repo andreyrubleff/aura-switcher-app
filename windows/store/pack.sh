@@ -5,6 +5,7 @@ set -euo pipefail
 export MSYS_NO_PATHCONV=1  # Git Bash would turn makeappx options like /o into paths
 cd "$(dirname "$0")"
 VERSION=$(grep -m1 '^VERSION=' ../build.sh | cut -d= -f2)
+V4=$(echo "$VERSION.0.0.0" | cut -d. -f1-3).0   # MSIX: four numbers, the last one 0
 source identity.env
 MAKEAPPX=$(ls "/c/Program Files (x86)/Windows Kits/10/bin/"10.*/x64/makeappx.exe | sort -V | tail -1)
 rm -rf build && mkdir -p build/bundle ../../dist
@@ -15,9 +16,9 @@ for T in x86_64:x64 aarch64:arm64; do
     aura.cpp aura.rc -o "store/$D/AURA Switcher.exe" -lole32 -lwinmm -luser32 -lshell32 -lgdi32 -ladvapi32 -lwinhttp -lbcrypt -lcomctl32 -static)
   rm -f $D/*.pdb
   sed -e "s|@NAME@|$NAME|" -e "s|@PUBLISHER@|$PUBLISHER|" -e "s|@PUBLISHER_NAME@|$PUBLISHER_NAME|" \
-      -e "s|@VERSION@|$VERSION.0.0|" -e "s|@ARCH@|$A|" AppxManifest.xml > $D/AppxManifest.xml
+      -e "s|@VERSION@|$V4|" -e "s|@ARCH@|$A|" AppxManifest.xml > $D/AppxManifest.xml
   "$MAKEAPPX" pack /o /d "$(cygpath -w $D)" /p "$(cygpath -w build/bundle/AURA-Switcher-$A.msix)"
 done
-"$MAKEAPPX" bundle /o /bv $VERSION.0.0 /d "$(cygpath -w build/bundle)" /p "$(cygpath -w ../../dist/AURA-Switcher-$VERSION.msixbundle)"
+"$MAKEAPPX" bundle /o /bv $V4 /d "$(cygpath -w build/bundle)" /p "$(cygpath -w ../../dist/AURA-Switcher-$VERSION.msixbundle)"
 rm -rf build
 echo "dist/AURA-Switcher-$VERSION.msixbundle"
