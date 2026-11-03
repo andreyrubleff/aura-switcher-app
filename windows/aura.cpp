@@ -574,6 +574,10 @@ static int autoFixTarget(const vector<Key>& keys) {
     if (!curDict && !model(curLoc)) return -1;  // typed in a language we can't check at all: may well be right
     wstring typed = layouts[cur].text(keys);
     if (S.isUserWord(typed) || (curDict ? isWord(typed, curLoc) : model(curLoc)->has(typed))) return -1;
+    // every other layout is a candidate; take the strongest kind of evidence, not the first layout in the
+    // list: with RU, UK, EN in that order «ghbdsn» must become the Ukrainian word «привіт», not the
+    // Russian look-alike «привыт» that only passes on letter statistics
+    int best = -1, bestTier = 0; double bestM = 0;
     for (size_t i = 1; i < layouts.size(); i++) {
         int j = int((cur + i) % layouts.size());
         wstring t = layouts[j].text(keys);
@@ -581,22 +585,24 @@ static int autoFixTarget(const vector<Key>& keys) {
         // Cyrillic UK/RU words spelled the same still switch the layout — that's what users mix up.
         if (t == typed && isLatin(t)) continue;
         if (!layouts[j].maps(keys) || consonantRun(t)) continue;
-        if (S.isUserWord(t)) return j;  // the user's own word («скілі»)
-        if (isLatin(t) && !isLatin(typed) && isCode(t, layouts[j].locale)) return j;
         double m = margin(typed, curLoc, t, layouts[j].locale);
-        if (dictionaryWorks(layouts[j].locale)) {
+        int tier = 0;
+        if (S.isUserWord(t)) tier = 4;  // the user's own word («скілі»)
+        else if (isLatin(t) && !isLatin(typed) && isCode(t, layouts[j].locale)) tier = 3;
+        else if (dictionaryWorks(layouts[j].locale)) {
             // without the typed language's dictionary, also ask the models which side looks real;
             // close languages in one script (Belarusian ↔ Russian) need the stricter margin
             double need = isCyrillic(typed) && isCyrillic(t) ? kMarginCyrillic : kMarginForDictWord;
-            if (isWord(t, layouts[j].locale) && (curDict || m >= need)) return j;
+            if (isWord(t, layouts[j].locale) && (curDict || m >= need)) tier = 2;
             // slang the dictionary doesn't know («гуглити»): long, another script, clearly typical of the language
-            if (t.size() >= 5 && isLatin(typed) != isLatin(t) && m >= kMarginNeeded) return j;
+            else if (t.size() >= 5 && isLatin(typed) != isLatin(t) && m >= kMarginNeeded) tier = 1;
         } else if (const LangModel* lm = model(layouts[j].locale)) {
             // no dictionary there: a frequent word, or clearly more typical than what was typed
-            if (lm->has(t) || m >= kMarginNeeded) return j;
+            if (lm->has(t)) tier = 2; else if (m >= kMarginNeeded) tier = 1;
         }
+        if (tier > bestTier || (tier && tier == bestTier && m > bestM)) { best = j; bestTier = tier; bestM = m; }
     }
-    return -1;
+    return best;
 }
 
 // MARK: - Actions (main thread)

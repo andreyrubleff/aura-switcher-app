@@ -524,6 +524,10 @@ final class Engine {
         // typed in a language we can't check at all: it may well be right — leave it
         guard curDict || model(cur.lang) != nil else { return nil }
         if settings.words.contains(typed.lowercased()) || (curDict ? isWord(typed, cur.lang) : model(cur.lang)!.has(typed)) { return nil }
+        // every other layout is a candidate; take the strongest kind of evidence, not the first layout in the
+        // list: with RU, UK, EN in that order «ghbdsn» must become the Ukrainian word «привіт», not the
+        // Russian look-alike «привыт» that only passes on letter statistics
+        var best: (tier: Int, m: Double, l: Layout)? = nil
         let start = index(cur.lang)
         for i in 1..<max(layouts.count, 1) {
             let l = layouts[(start + i) % layouts.count]
@@ -532,22 +536,24 @@ final class Engine {
             // Cyrillic UK/RU words spelled the same still switch the layout — that's what users mix up.
             if t == typed, isLatin(t) { continue }
             guard l.maps(keys), !consonantRun(t) else { continue }
-            if settings.words.contains(t.lowercased()) { return l }  // the user's own word («скілі»)
-            if isLatin(t), !isLatin(typed), isCode(t, l.lang) { return l }
-            let m = margin(typed, cur.lang, t, l.lang)
-            if dictionaryWorks(l.lang) {
+            let m = margin(typed, cur.lang, t, l.lang) ?? 0
+            var tier = 0
+            if settings.words.contains(t.lowercased()) { tier = 4 }  // the user's own word («скілі»)
+            else if isLatin(t), !isLatin(typed), isCode(t, l.lang) { tier = 3 }
+            else if dictionaryWorks(l.lang) {
                 // without the typed language's dictionary, also ask the models which side looks real;
                 // close languages in one script (Belarusian ↔ Russian) need the stricter margin
                 let need = isCyrillic(typed) && isCyrillic(t) ? Engine.marginCyrillic : Engine.marginForDictWord
-                if isWord(t, l.lang), curDict || (m ?? 0) >= need { return l }
+                if isWord(t, l.lang), curDict || m >= need { tier = 2 }
                 // slang the dictionary doesn't know («гуглити»): long, another script, clearly typical of the language
-                if t.count >= 5, isLatin(typed) != isLatin(t), (m ?? 0) >= Engine.marginNeeded { return l }
+                else if t.count >= 5, isLatin(typed) != isLatin(t), m >= Engine.marginNeeded { tier = 1 }
             } else if let lm = model(l.lang) {
                 // no dictionary there: a frequent word, or clearly more typical than what was typed
-                if lm.has(t) || (m ?? 0) >= Engine.marginNeeded { return l }
+                if lm.has(t) { tier = 2 } else if m >= Engine.marginNeeded { tier = 1 }
             }
+            if tier > 0, best == nil || (tier, m) > (best!.tier, best!.m) { best = (tier, m, l) }
         }
-        return nil
+        return best?.l
     }
 
     // MARK: double shift

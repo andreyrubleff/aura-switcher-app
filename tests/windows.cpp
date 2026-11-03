@@ -134,6 +134,13 @@ int wmain(int argc, wchar_t** argv) {
         bool good = m.fix ? got == wstring(m.w) + L"\x01" : got.empty();
         if (!good) { mustFail++; printf("MUST FAIL: %s -> %s\n", utf8(m.w).c_str(), got.empty() ? "unchanged" : utf8(got).c_str()); }
     }
+    // the list order mustn't decide: with RU, UK, EN (Windows after switching the UI to Ukrainian)
+    // «ghbdsn» is the Ukrainian «привіт», not the Russian look-alike «привыт»
+    layouts = {layout(L"00000419"), layout(L"00000422"), layout(US)}; reliable.clear();
+    {
+        wstring got = run(L"привіт", layouts[1], layouts[2]);
+        if (got != L"привіт\x01") { mustFail++; printf("MUST FAIL (RU,UK,EN order): привіт -> %s\n", got.empty() ? "unchanged" : utf8(got).c_str()); }
+    }
 
     std::string out;
     for (auto& r : results) {
