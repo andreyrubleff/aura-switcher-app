@@ -856,6 +856,11 @@ static void setLogin(bool on) {
 
 // MARK: - Menu
 
+// empty submenu: tell where it gets filled — «Порожньо — ↑ «Не працювати в цій програмі»»
+static wstring emptyHint(const wchar_t* fillItem) {
+    return wstring(L_(L"Empty", L"Порожньо")) + L" — ↑ «" + fillItem + L"»";
+}
+
 static wstring menuExe;  // app that was in front when the menu opened
 static vector<wstring> menuExDel, menuBdDel, recentExe;  // recentExe: last apps, newest first
 static bool fgGame = false;
@@ -974,7 +979,7 @@ static void showMenu() {
     }
 
     HMENU em = CreatePopupMenu(); menuExDel = S.excluded;
-    if (menuExDel.empty()) item(em, 0, L_(L"Empty", L"Порожньо"), false, false);
+    if (menuExDel.empty()) item(em, 0, emptyHint(L_(L"Don't work in this app", L"Не працювати в цій програмі")), false, false);
     for (size_t i = 0; i < menuExDel.size(); i++) item(em, UINT(ID_EXDEL0 + i), L"✕ " + menuExDel[i]);
     AppendMenuW(m, MF_POPUP, (UINT_PTR)em, L_(L"Exclusions", L"Винятки"));
 
@@ -985,7 +990,7 @@ static void showMenu() {
     AppendMenuW(m, MF_POPUP, (UINT_PTR)rm, L_(L"Don't work in (recent apps)", L"Не працювати в (останні програми)"));
 
     HMENU bm = CreatePopupMenu(); menuBdDel.clear();
-    if (S.bindings.empty()) item(bm, 0, L_(L"Empty", L"Порожньо"), false, false);
+    if (S.bindings.empty()) item(bm, 0, emptyHint(L_(L"Language for this app", L"Мова для цієї програми")), false, false);
     for (auto& kv : S.bindings) {
         item(bm, UINT(ID_BDDEL0 + menuBdDel.size()), L"✕ " + kv.first + L" → " + displayCode(kv.second));
         menuBdDel.push_back(kv.first);

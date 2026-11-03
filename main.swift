@@ -134,7 +134,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         m.addItem(.separator())
 
         let exMenu = NSMenu()
-        if s.excluded.isEmpty { add(exMenu, L("empty")) }
+        if s.excluded.isEmpty { add(exMenu, emptyHint("exclude")) }
         for e in s.excluded { add(exMenu, "✕ \(appName(e))") { self.s.excluded = self.s.excluded.filter { $0 != e } } }
         let ei = NSMenuItem(title: L("exclusions"), action: nil, keyEquivalent: ""); ei.submenu = exMenu; m.addItem(ei)
 
@@ -147,7 +147,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let ri = NSMenuItem(title: L("recent"), action: nil, keyEquivalent: ""); ri.submenu = rMenu; m.addItem(ri)
 
         let bMenu = NSMenu()
-        if s.bindings.isEmpty { add(bMenu, L("empty")) }
+        if s.bindings.isEmpty { add(bMenu, emptyHint("appLang")) }
         for (b, l) in s.bindings.sorted(by: { $0.key < $1.key }) {
             add(bMenu, "✕ \(appName(b)) → \(displayCode(l))") { self.s.bindings[b] = nil }
         }

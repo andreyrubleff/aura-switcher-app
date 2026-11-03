@@ -276,6 +276,8 @@ func uiCode() -> String {
 }
 
 func L(_ key: String) -> String { uiStrings[key]?[uiLangs.firstIndex(of: uiCode()) ?? 0] ?? key }
+/// empty submenu: tell where it gets filled — «Порожньо — ↑ «Не працювати в цій програмі»»
+func emptyHint(_ fillKey: String) -> String { "\(L("empty")) — ↑ «\(L(fillKey).trimmingCharacters(in: .whitespaces))»" }
 
 // MARK: - Engine
 
