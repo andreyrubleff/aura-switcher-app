@@ -33,7 +33,12 @@ cat > "$APP/Contents/Info.plist" <<EOF
 <key>AURABuildDate</key><string>$(date +%s)</string>
 </dict></plist>
 EOF
-codesign --force -s - "$APP"
+# Stable self-signed identity "AURA Switcher" (login keychain; backup kept by the maintainer): the signature
+# stays the same between versions, so macOS keeps the Accessibility permission after updates.
+# Without it (CI, other machines) — ad-hoc, which makes users re-grant the permission after every update.
+SIGN=-
+security find-identity -p codesigning 2>/dev/null | grep -q '"AURA Switcher"' && SIGN="AURA Switcher"
+codesign --force -s "$SIGN" "$APP"
 
 if [[ "$1" == "--release" ]]; then
   mkdir -p dist && rm -f dist/$FILE-$VERSION.zip
