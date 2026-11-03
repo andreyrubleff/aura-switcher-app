@@ -455,8 +455,9 @@ static bool dictionaryWorks(const wstring& locale) {
         if (!r) break;
         if (l.locale != locale) continue;
         // nonsense from the layout's own letters (keys like Q or Z may type several characters elsewhere)
-        std::set<wchar_t> set; for (auto& kv : l.toChar) if (IsCharAlphaW(kv.second)) set.insert(kv.second);
-        vector<wchar_t> letters(set.begin(), set.end());
+        // only the layout's own script (a Cyrillic layout may also type a Latin letter the spell check skips)
+        std::set<wchar_t> set, own; for (auto& kv : l.toChar) if (IsCharAlphaW(kv.second)) { set.insert(kv.second); if (kv.second >= 0x250) own.insert(kv.second); }
+        vector<wchar_t> letters = own.size() >= 3 ? vector<wchar_t>(own.begin(), own.end()) : vector<wchar_t>(set.begin(), set.end());
         if (letters.size() >= 3) {
             wstring a(7, letters[0]), b; for (int i = 0; i < 7; i++) b += letters[1 + i % 2];
             if (spell(a, locale) || spell(b, locale)) r = false;

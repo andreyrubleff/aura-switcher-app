@@ -457,7 +457,11 @@ final class Engine {
         var r = NSSpellChecker.shared.availableLanguages.contains { $0.hasPrefix(lang) }
         if r, let l = layouts.first(where: { $0.lang == lang }) {
             // nonsense from the layout's own letters (keys like Q or Z may type several characters elsewhere)
-            let letters = Array(Set(l.toChar.values.filter(\.isLetter))).sorted()
+            // only the layout's own script: macOS «Russian – PC» also types a Latin «Ë», and «ËËËËËËË» passes
+            // the Russian spell check (it skips Latin words) — that wrongly switched the Russian dictionary off
+            let all = Array(Set(l.toChar.values.filter(\.isLetter))).sorted()
+            let own = all.filter { !isLatin(String($0)) }
+            let letters = own.count >= 3 ? own : all
             if letters.count >= 3 {
                 for w in [String(repeating: letters[0], count: 7), String((0..<7).map { letters[1 + $0 % 2] })] where spell(w, lang) { r = false }
             }
