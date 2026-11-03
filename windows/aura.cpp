@@ -480,7 +480,13 @@ static bool isWord(wstring w, const wstring& locale) {
     if (w.size() == 2 && t != two.end()) return t->second.find(L" " + low + L" ") != wstring::npos;
     wstring up = w; CharUpperBuffW(&up[0], DWORD(up.size()));
     if (w == up) w = low;  // all caps passes any spell check
-    return dictionaryWorks(locale) && spell(w, locale);
+    if (!dictionaryWorks(locale)) return false;
+    if (spell(w, locale)) return true;
+    // names typed in lower case: «вінницею» is only in the dictionary as «Вінницею». Not for Latin
+    // (English names like «Tot» would make gibberish a word) and not for short words
+    if (w != low || w.size() < 5 || w[0] < 0x250) return false;
+    wstring cap = w; CharUpperBuffW(&cap[0], 1);
+    return spell(cap, locale);
 }
 
 // five Cyrillic consonants in a row: gibberish the spell checker let through ("brachii," → «икфсршшб»)

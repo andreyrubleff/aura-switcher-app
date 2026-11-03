@@ -452,7 +452,11 @@ final class Engine {
         guard w.count >= 2, w.allSatisfy(\.isLetter) || w.contains("'") || w.contains("-") else { return false }
         if w.count == 2, let set = Engine.twoLetterWords[lang] { return set.contains(w.lowercased()) }
         if w == w.uppercased() { w = w.lowercased() }  // all caps passes any spell check
-        return dictionaryWorks(lang) && spell(w, lang)
+        guard dictionaryWorks(lang) else { return false }
+        if spell(w, lang) { return true }
+        // names typed in lower case: «вінницею» is only in the dictionary as «Вінницею». Not for Latin
+        // (English names like «Tot» would make gibberish a word) and not for short words
+        return w.count >= 5 && !isLatin(w) && w == w.lowercased() && spell(w.prefix(1).uppercased() + w.dropFirst(), lang)
     }
 
     func spell(_ w: String, _ lang: String) -> Bool {
