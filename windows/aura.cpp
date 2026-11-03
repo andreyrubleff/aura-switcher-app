@@ -33,7 +33,9 @@
 #include <string>
 #include <vector>
 
-#define APP_VERSION L"0.8"
+#ifndef APP_VERSION   // test builds: -DAPP_VERSION=L\"0.8.9\"
+#define APP_VERSION L"0.9"
+#endif
 #ifndef BUILD_TIME
 #define BUILD_TIME 0  // build.sh passes the build date (seconds since 1970)
 #endif
