@@ -1,6 +1,8 @@
 # Builds the Microsoft Store package (windows/store/pack.sh). Run by hand: Actions → store → Run workflow; download the artifact.
 name: store
 on: workflow_dispatch
+permissions:
+  contents: read
 jobs:
   msix:
     runs-on: windows-2025
@@ -9,7 +11,7 @@ jobs:
         shell: bash
     steps:
       - uses: actions/checkout@v4
-      - uses: mlugg/setup-zig@v2
+      - uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29  # v2
         with:
           version: 0.17.0
       - name: Pack

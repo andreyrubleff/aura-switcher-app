@@ -34,7 +34,7 @@
 #include <vector>
 
 #ifndef APP_VERSION   // test builds: -DAPP_VERSION=L\"0.8.9\"
-#define APP_VERSION L"0.9.2"
+#define APP_VERSION L"0.9.3"
 #endif
 #ifndef BUILD_TIME
 #define BUILD_TIME 0  // build.sh passes the build date (seconds since 1970)
@@ -44,7 +44,7 @@ using std::wstring;
 using std::vector;
 
 static const ULONG_PTR kMagic = 0x4B535754;  // marks our own synthetic input
-enum { WM_TRAY = WM_APP + 1, WM_AUTO, WM_DSHIFT, WM_UPDATE };
+enum { WM_TRAY = WM_APP + 1, WM_AUTO, WM_DSHIFT, WM_UPDATE, WM_UPDATE_READY };
 enum { ID_ENABLED = 1, ID_AUTO, ID_SOUND, ID_WORDS, ID_DONATE, ID_REPORT, ID_UPDATE, ID_EXCLUDE, ID_NOBIND, ID_LOGIN, ID_UI_SYS, ID_QUIT,
        ID_BIND0 = 100, ID_EXDEL0 = 200, ID_BDDEL0 = 300, ID_RECENT0 = 400, ID_UI0 = 500 };
 
@@ -93,8 +93,9 @@ struct Settings {
 };
 static Settings S;
 
-// Updates without going online: the app never contacts a server. The menu opens the site's update page in
-// the browser (only the version and menu language are in its address), and some time after this build (or
+// Updates: the app goes online only when the user clicks «Check for updates…» (update.json on klbk.github.io,
+// the download from github.com); nothing typed and no personal data is ever sent. «What's new» opens the site's
+// update page (only the version and menu language are in its address), and some time after this build (or
 // after the last check) the menu and the tray icon remind that a newer version may be out.
 static const long long kUpdateNudgeDays = 30;
 static long long updateChecked = wcstoll(regGet(L"updateChecked", L"0").c_str(), nullptr, 10);  // last opened the releases page
@@ -904,18 +905,27 @@ static void setLogin(bool on) {
 }
 
 // MARK: - Update in one click
-// Only when the user clicks «Check for updates…», never in the background: read the site's update.json,
-// download this architecture's exe from GitHub Releases, check its SHA-256 against update.json, put it in
+// Only when the user clicks «Check for updates…», never in the background: read the site's update.json and
+// update.sig, check the signature (ECDSA P-256, private key offline with the maintainer — tools/update_manifest.py),
+// download this architecture's exe from our GitHub Releases on a worker thread, check its SHA-256, put it in
 // place of this exe (a running exe can be renamed) and start it. Anything goes wrong → the site's update page.
 #if defined(__aarch64__) || defined(_M_ARM64)
 static const char* kUpdArch = "win-arm64";
 #else
 static const char* kUpdArch = "win-x64";
 #endif
+static const UCHAR kUpdKey[64] = {   // public key (X, Y) of the update.json signature
+    0xac, 0xff, 0x1e, 0xf6, 0x5b, 0xd8, 0xdb, 0x22, 0xa9, 0x07, 0x88, 0xc7, 0xe5, 0x01, 0x6e, 0x4a,
+    0x1d, 0xe9, 0x49, 0x47, 0x49, 0x32, 0xe1, 0xa4, 0x63, 0xec, 0xbf, 0x71, 0x83, 0x2d, 0x85, 0xb4,
+    0xcb, 0x5b, 0x01, 0x95, 0x5e, 0x75, 0x23, 0xf0, 0x58, 0xf6, 0xf4, 0x24, 0xfe, 0xa0, 0xf2, 0x16,
+    0xed, 0x9d, 0xd9, 0xc3, 0x36, 0x55, 0x54, 0x72, 0xc2, 0xee, 0xd9, 0x28, 0x16, 0x8c, 0xb9, 0xc4};
+static const char* kUpdDownloads = "https://github.com/klbk/aura-switcher/releases/download/";
+static const size_t kUpdMaxExe = 50u << 20;
 static HANDLE instanceMutex = nullptr;
-struct UpdateInfo { std::string version, url, sha256; bool ok = false; };
+static std::atomic<bool> updBusy{false};   // a check or a download is running
+struct UpdateInfo { std::string version, url, sha256, data; bool ok = false; };
 
-static bool httpGet(const wstring& url, std::string& out) {
+static bool httpGet(const wstring& url, std::string& out, size_t maxBytes) {
     URL_COMPONENTS u = {sizeof(u)}; wchar_t host[256], path[2048];
     u.lpszHostName = host; u.dwHostNameLength = 256; u.lpszUrlPath = path; u.dwUrlPathLength = 2048;
     if (!WinHttpCrackUrl(url.c_str(), 0, 0, &u)) return false;
@@ -927,6 +937,7 @@ static bool httpGet(const wstring& url, std::string& out) {
     if (ok) ok = WinHttpQueryHeaders(r, WINHTTP_QUERY_STATUS_CODE | WINHTTP_QUERY_FLAG_NUMBER, nullptr, &status, &len, nullptr) && status == 200;
     out.clear();
     for (DWORD n = 0; ok && WinHttpQueryDataAvailable(r, &n) && n; ) {
+        if (out.size() + n > maxBytes) { ok = false; break; }   // far bigger than expected: not ours
         size_t at = out.size(); out.resize(at + n); DWORD got = 0;
         if (!WinHttpReadData(r, &out[at], n, &got)) ok = false;
         out.resize(at + got);
@@ -945,23 +956,51 @@ static bool newerVersion(const std::string& a, const std::string& b) {
     for (int i = 0; i < 4; i++) if (x[i] != y[i]) return x[i] > y[i];
     return false;
 }
-static std::string sha256hex(const std::string& data) {
-    BCRYPT_ALG_HANDLE alg; UCHAR h[32]; std::string r;
-    if (BCryptOpenAlgorithmProvider(&alg, BCRYPT_SHA256_ALGORITHM, nullptr, 0)) return r;
-    BCryptHash(alg, nullptr, 0, (PUCHAR)data.data(), ULONG(data.size()), h, 32);
+static bool sha256(const std::string& data, UCHAR h[32]) {
+    BCRYPT_ALG_HANDLE alg;
+    if (BCryptOpenAlgorithmProvider(&alg, BCRYPT_SHA256_ALGORITHM, nullptr, 0)) return false;
+    bool ok = !BCryptHash(alg, nullptr, 0, (PUCHAR)data.data(), ULONG(data.size()), h, 32);
     BCryptCloseAlgorithmProvider(alg, 0);
+    return ok;
+}
+static std::string sha256hex(const std::string& data) {
+    UCHAR h[32]; std::string r; if (!sha256(data, h)) return r;
     char b[3]; for (UCHAR c : h) { snprintf(b, 3, "%02x", c); r += b; }
     return r;
 }
+// update.sig: hex of the raw ECDSA P-256 signature (r||s) of update.json's exact bytes
+static bool manifestSigned(const std::string& json, const std::string& sigHex) {
+    UCHAR sig[64], h[32];
+    if (sigHex.size() < 128) return false;
+    for (int i = 0; i < 64; i++) { unsigned v; if (sscanf(sigHex.c_str() + 2 * i, "%2x", &v) != 1) return false; sig[i] = UCHAR(v); }
+    if (!sha256(json, h)) return false;
+    struct { BCRYPT_ECCKEY_BLOB hdr; UCHAR xy[64]; } blob = {{BCRYPT_ECDSA_PUBLIC_P256_MAGIC, 32}, {}};
+    memcpy(blob.xy, kUpdKey, 64);
+    BCRYPT_ALG_HANDLE alg; BCRYPT_KEY_HANDLE key = nullptr; bool ok = false;
+    if (BCryptOpenAlgorithmProvider(&alg, BCRYPT_ECDSA_P256_ALGORITHM, nullptr, 0)) return false;
+    if (!BCryptImportKeyPair(alg, nullptr, BCRYPT_ECCPUBLIC_BLOB, &key, (PUCHAR)&blob, sizeof(blob), 0))
+        ok = !BCryptVerifySignature(key, nullptr, h, 32, sig, 64, 0);
+    if (key) BCryptDestroyKey(key);
+    BCryptCloseAlgorithmProvider(alg, 0);
+    return ok;
+}
 static DWORD WINAPI updateCheckThread(LPVOID) {
-    auto* u = new UpdateInfo; std::string j;
-    if (httpGet(L"https://klbk.github.io/aura-switcher/update.json", j)) {
+    auto* u = new UpdateInfo; std::string j, sig;
+    if (httpGet(L"https://klbk.github.io/aura-switcher/update.json", j, 64 << 10) &&
+        httpGet(L"https://klbk.github.io/aura-switcher/update.sig", sig, 1 << 10) && manifestSigned(j, sig)) {
         size_t sec = j.find(std::string("\"") + kUpdArch + "\"");
         u->version = jsonStr(j, "version");
         if (sec != std::string::npos) { u->url = jsonStr(j, "url", sec); u->sha256 = jsonStr(j, "sha256", sec); }
-        u->ok = !u->version.empty() && !u->url.empty() && u->sha256.size() == 64;
+        u->ok = !u->version.empty() && u->url.rfind(kUpdDownloads, 0) == 0 && u->sha256.size() == 64;
     }
     PostMessageW(hwndMain, WM_UPDATE, 0, (LPARAM)u);
+    return 0;
+}
+// worker thread: download the exe and check its hash; the swap itself happens on the main thread (WM_UPDATE_READY)
+static DWORD WINAPI updateDownloadThread(LPVOID p) {
+    auto* u = (UpdateInfo*)p;
+    u->ok = httpGet(wstring(u->url.begin(), u->url.end()), u->data, kUpdMaxExe) && u->data.size() >= 100000 && sha256hex(u->data) == u->sha256;
+    PostMessageW(hwndMain, WM_UPDATE_READY, 0, (LPARAM)u);
     return 0;
 }
 static void openUpdatePage() {
@@ -976,12 +1015,11 @@ static int askButtons(const wstring& text, std::initializer_list<const wchar_t*>
     return SUCCEEDED(TaskDialogIndirect(&c, &pressed, nullptr, nullptr)) ? pressed - 100 : -1;
 }
 static void updateFailed() {
+    updBusy = false;
     if (askButtons(L_(L"Couldn't update automatically. Open the website to download it?", L"Не вдалося оновити автоматично. Відкрити сайт, щоб завантажити?"),
                    {L"OK", L_(L"Later", L"Пізніше")}) == 0) openUpdatePage();
 }
-static bool installUpdate(const UpdateInfo& u) {
-    std::string data;
-    if (!httpGet(wstring(u.url.begin(), u.url.end()), data) || data.size() < 100000 || sha256hex(data) != u.sha256) return false;
+static bool installUpdate(const std::string& data) {
     wchar_t self[MAX_PATH]; GetModuleFileNameW(nullptr, self, MAX_PATH);
     wstring exe = self, fresh = exe + L".new", old = exe + L".old";
     HANDLE f = CreateFileW(fresh.c_str(), GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS, 0, nullptr);
@@ -991,7 +1029,12 @@ static bool installUpdate(const UpdateInfo& u) {
     if (!MoveFileExW(fresh.c_str(), exe.c_str(), 0)) { MoveFileExW(old.c_str(), exe.c_str(), 0); return false; }
     if (instanceMutex) { CloseHandle(instanceMutex); instanceMutex = nullptr; }   // let the new copy start
     STARTUPINFOW si = {sizeof(si)}; PROCESS_INFORMATION pi;
-    if (!CreateProcessW(exe.c_str(), nullptr, nullptr, nullptr, FALSE, 0, nullptr, nullptr, &si, &pi)) return false;
+    if (!CreateProcessW(exe.c_str(), nullptr, nullptr, nullptr, FALSE, 0, nullptr, nullptr, &si, &pi)) {
+        // the new exe didn't start: put this one back and keep running as the only copy
+        DeleteFileW(exe.c_str()); MoveFileExW(old.c_str(), exe.c_str(), 0);
+        instanceMutex = CreateMutexW(nullptr, TRUE, L"Local\\AURA-single-instance");
+        return false;
+    }
     CloseHandle(pi.hThread); CloseHandle(pi.hProcess);
     return true;
 }
@@ -1000,6 +1043,7 @@ static void onUpdateInfo(UpdateInfo* u) {
     if (!u->ok) return updateFailed();
     std::string cur; for (const wchar_t* p = APP_VERSION; *p; p++) cur += char(*p);
     if (!newerVersion(u->version, cur)) {
+        updBusy = false;
         askButtons(L_(L"You have the latest version", L"У вас остання версія"), {L"OK"});
         return;
     }
@@ -1007,9 +1051,23 @@ static void onUpdateInfo(UpdateInfo* u) {
     size_t at = msg.find(L"{v}"); if (at != wstring::npos) msg.replace(at, 3, wstring(u->version.begin(), u->version.end()));
     int b = askButtons(msg, {L_(L"Update", L"Оновити"), L_(L"What's new", L"Що нового"), L_(L"Later", L"Пізніше")});
     if (b == 1) openUpdatePage();
-    if (b != 0) return;
-    if (installUpdate(*u)) PostQuitMessage(0);
+    if (b != 0) { updBusy = false; return; }
+    HANDLE t = CreateThread(nullptr, 0, updateDownloadThread, keep.get(), 0, nullptr);
+    if (!t) return updateFailed();
+    CloseHandle(t); keep.release();   // the thread posts it back
+}
+static void onUpdateReady(UpdateInfo* u) {
+    std::unique_ptr<UpdateInfo> keep(u);
+    if (u->ok && installUpdate(u->data)) PostQuitMessage(0);
     else updateFailed();
+}
+// the previous exe (renamed during an update) can be deleted only once its process has quit
+static DWORD WINAPI deleteOldExe(LPVOID) {
+    wchar_t self[MAX_PATH]; GetModuleFileNameW(nullptr, self, MAX_PATH);
+    wstring old = wstring(self) + L".old";
+    for (int i = 0; i < 30 && GetFileAttributesW(old.c_str()) != INVALID_FILE_ATTRIBUTES; i++)
+        if (!DeleteFileW(old.c_str())) Sleep(1000);
+    return 0;
 }
 
 // MARK: - Menu
@@ -1164,8 +1222,10 @@ static void showMenu() {
     for (int i = 0; i < UI_N; i++) item(um, UINT(ID_UI0 + i), UI_NAMES[i], S.uiLang == UI_LANGS[i]);
     AppendMenuW(m, MF_POPUP, (UINT_PTR)um, L_(L"Menu language", L"Мова меню"));
     item(m, 0, L_(L"Double ⇧ — convert word/selection", L"Подвійний ⇧ — змінити мову слова/виділення"), false, false);
-    if (!packaged()) item(m, ID_UPDATE, updateDue() ? L_(L"⬆︎ An update may be available — check", L"⬆︎ Можливо, вийшло оновлення — перевірити")
-                                   : L_(L"Check for updates…", L"Перевірити оновлення…"));
+    if (packaged()) {}
+    else if (updBusy) item(m, 0, L_(L"Updating…", L"Оновлення…"), false, false);
+    else item(m, ID_UPDATE, updateDue() ? L_(L"⬆︎ An update may be available — check", L"⬆︎ Можливо, вийшло оновлення — перевірити")
+                                        : L_(L"Check for updates…", L"Перевірити оновлення…"));
     item(m, ID_REPORT, L_(L"Report a problem…", L"Повідомити про проблему…"));
     if (!packaged()) item(m, ID_DONATE, L_(L"Support AURA Switcher ☕", L"Підтримати AURA Switcher ☕"));  // Store: no outside payment links
     item(m, 0, L"AURA Switcher " APP_VERSION L" beta · 🇺🇦", false, false);
@@ -1193,7 +1253,7 @@ static void showMenu() {
     }
     else if (cmd == ID_WORDS) editWords();
     else if (cmd == ID_REPORT) reportProblem();
-    else if (cmd == ID_UPDATE) {
+    else if (cmd == ID_UPDATE && !updBusy.exchange(true)) {
         updateChecked = (long long)time(nullptr); regSet(L"updateChecked", std::to_wstring(updateChecked));
         CloseHandle(CreateThread(nullptr, 0, updateCheckThread, nullptr, 0, nullptr));
     }
@@ -1283,6 +1343,7 @@ static LRESULT CALLBACK wndProc(HWND h, UINT msg, WPARAM wp, LPARAM lp) {
     case WM_AUTO: { auto* s = (Snapshot*)lp; if (active) onAuto(s); delete s; return 0; }
     case WM_DSHIFT: { auto* s = (Snapshot*)lp; if (active) onDoubleShift(s); delete s; return 0; }
     case WM_UPDATE: onUpdateInfo((UpdateInfo*)lp); return 0;
+    case WM_UPDATE_READY: onUpdateReady((UpdateInfo*)lp); return 0;
     case WM_TIMER:
         if (wp == TIMER_LATE_CLIP) {
             KillTimer(h, TIMER_LATE_CLIP);
@@ -1308,10 +1369,7 @@ int WINAPI wWinMain(HINSTANCE inst, HINSTANCE, PWSTR, int) {
     // single instance: a second copy would double every correction
     instanceMutex = CreateMutexW(nullptr, TRUE, L"Local\\AURA-single-instance");
     if (GetLastError() == ERROR_ALREADY_EXISTS) return 0;
-    {   // left over from an update: the previous exe
-        wchar_t self[MAX_PATH]; GetModuleFileNameW(nullptr, self, MAX_PATH);
-        DeleteFileW((wstring(self) + L".old").c_str());
-    }
+    CloseHandle(CreateThread(nullptr, 0, deleteOldExe, nullptr, 0, nullptr));   // left over from an update
 
     CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
     CoCreateInstance(__uuidof(SpellCheckerFactory), nullptr, CLSCTX_INPROC_SERVER, __uuidof(ISpellCheckerFactory), (void**)&factory);

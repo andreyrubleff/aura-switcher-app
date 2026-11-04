@@ -11,7 +11,7 @@ Website — https://klbk.github.io/aura-switcher/ · Support ☕ — https://don
 
 ## Open source & support
 
-- **Open source:** https://github.com/klbk/aura-switcher-app (GPL-3.0). The app sees everything you type, so anyone can check that it stores nothing and sends nothing online.
+- **Open source:** https://github.com/klbk/aura-switcher-app (GPL-3.0). The app sees everything you type, so anyone can check that it stores nothing and never sends what you type.
 - **Free.** If AURA Switcher helps you, support development: **https://donatello.to/aura-switcher** ☕ (any country's card). The link is also on the website and in the app menu ("Support AURA Switcher ☕").
 - **Download:** https://github.com/klbk/aura-switcher/releases/latest
 - **Contact & bugs:** auraswitcher@gmail.com — or "Report a problem…" in the app menu (the email opens with version, system and layouts filled in).
@@ -27,7 +27,7 @@ Website — https://klbk.github.io/aura-switcher/ · Support ☕ — https://don
 - **Per-app language.** The layout is set automatically when you switch to an app (e.g. Terminal → EN). Auto-correction is off in apps with a bound language.
 - **Single instance.** A second running copy of AURA quits immediately, so text is never corrected twice.
 - **Games.** AURA pauses itself in games (double ⇧ is often sprint there): on Mac — apps in the Games category, on Windows — full-screen games. A game AURA didn't recognise can be excluded after leaving it: menu → "Don't work in (recent apps)".
-- **Updates without going online.** AURA itself never sends or downloads anything. Menu → "Check for updates…" opens a page on the site in the browser: whether a new version is out, what's new, a download button and the steps to update (its address holds only the version number and menu language). 30 days after the build (or after the last check) a dot appears next to the language code and the menu says "⬆︎ An update may be available — check".
+- **Update in one click, only when you ask.** AURA goes online only when you click Menu → "Check for updates…": it reads the version file on klbk.github.io and, if you agree, downloads the new version from GitHub Releases, checks it (Mac: AURA's signature and version; Windows: the signed version file and the exe's SHA-256), puts it in place of the old one and restarts. Nothing you typed and no personal data is sent. If anything goes wrong, it offers the site's update page instead (its address holds only the version number and menu language). 30 days after the build (or after the last check) a dot appears next to the language code and the menu says "⬆︎ An update may be available — check".
 
 ## Languages
 

@@ -6,8 +6,14 @@ import Security
 /// checks that it is signed with AURA's own certificate, replaces this app and relaunches it.
 /// Anything goes wrong → offer the site's update page instead.
 enum Updater {
-    static let manifest = URL(string: ProcessInfo.processInfo.environment["AURA_UPDATE_MANIFEST"]   // tests: file://…
-                                     ?? "https://klbk.github.io/aura-switcher/update.json")!
+    #if DEBUG   // manual tests only: a release build always reads the site
+    static let manifest = ProcessInfo.processInfo.environment["AURA_UPDATE_MANIFEST"].flatMap(URL.init(string:)) ?? site
+    #else
+    static let manifest = site
+    #endif
+    static let site = URL(string: "https://klbk.github.io/aura-switcher/update.json")!
+    /// downloads only from our GitHub releases, whatever the manifest says
+    static let downloads = "https://github.com/klbk/aura-switcher/releases/download/"
     /// our signing certificate (build.sh signs with the «AURA Switcher» identity)
     static let requirement = #"identifier "com.chernov.aura" and certificate root = H"b30424a8e21ddea70fa9317cfa686590baefef24""#
     static var current: String { Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0" }
@@ -24,14 +30,15 @@ enum Updater {
         URLSession.shared.dataTask(with: URLRequest(url: manifest, cachePolicy: .reloadIgnoringLocalCacheData)) { data, _, _ in
             let j = data.flatMap { try? JSONSerialization.jsonObject(with: $0) as? [String: Any] }
             DispatchQueue.main.async {
-                guard let j, let v = j["version"] as? String, let mac = (j["mac"] as? String).flatMap(URL.init) else { return failed() }
+                guard let j, let v = j["version"] as? String, let m = j["mac"] as? String, m.hasPrefix(downloads),
+                      let mac = URL(string: m) else { return failed() }
                 guard newer(v, than: current) else { return say(L("updLatest").replacingOccurrences(of: "{v}", with: current)) }
                 let a = NSAlert()
                 a.messageText = L("updNew").replacingOccurrences(of: "{v}", with: v)
                 a.addButton(withTitle: L("updNow")); a.addButton(withTitle: L("updNotes")); a.addButton(withTitle: L("updLater"))
                 NSApp.activate(ignoringOtherApps: true)
                 switch a.runModal() {
-                case .alertFirstButtonReturn: install(mac)
+                case .alertFirstButtonReturn: install(mac, version: v)
                 case .alertSecondButtonReturn: NSWorkspace.shared.open(updatePageURL())
                 default: break
                 }
@@ -39,9 +46,9 @@ enum Updater {
         }.resume()
     }
 
-    static func install(_ url: URL) {
+    static func install(_ url: URL, version: String) {
         URLSession.shared.downloadTask(with: url) { file, _, _ in
-            let ok = file.map { replace($0) } ?? false
+            let ok = file.map { replace($0, version: version) } ?? false
             DispatchQueue.main.async {
                 guard ok else { return failed() }
                 // the new copy starts once this one has quit
@@ -53,8 +60,8 @@ enum Updater {
         }.resume()
     }
 
-    /// unzip, check the signature, swap the bundle in place
-    static func replace(_ zip: URL, into target: URL = Bundle.main.bundleURL) -> Bool {
+    /// unzip, check the signature and the version, swap the bundle in place
+    static func replace(_ zip: URL, version: String, into target: URL = Bundle.main.bundleURL) -> Bool {
         let fm = FileManager.default
         let dir = fm.temporaryDirectory.appendingPathComponent("aura-update-\(UUID().uuidString)")
         defer { try? fm.removeItem(at: dir) }
@@ -68,7 +75,11 @@ enum Updater {
         var code: SecStaticCode?, req: SecRequirement?
         guard SecStaticCodeCreateWithPath(app as CFURL, [], &code) == errSecSuccess, let code,
               SecRequirementCreateWithString(requirement as CFString, [], &req) == errSecSuccess,
-              SecStaticCodeCheckValidity(code, SecCSFlags(rawValue: kSecCSCheckAllArchitectures), req) == errSecSuccess
+              SecStaticCodeCheckValidity(code, SecCSFlags(rawValue: kSecCSCheckAllArchitectures | kSecCSStrictValidate | kSecCSCheckNestedCode),
+                                         req) == errSecSuccess,
+              // exactly the version the manifest announced, and newer than this one: an old signed build can't come back
+              let info = Bundle(url: app)?.infoDictionary, info["CFBundleIdentifier"] as? String == "com.chernov.aura",
+              let got = info["CFBundleShortVersionString"] as? String, got == version, newer(got, than: current)
         else { return false }
         return (try? fm.replaceItemAt(target, withItemAt: app)) != nil
     }

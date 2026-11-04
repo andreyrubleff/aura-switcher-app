@@ -161,9 +161,10 @@ final class Settings {
     var updateCheckedAt: Double { get { d.double(forKey: "updateCheckedAt") } set { d.set(newValue, forKey: "updateCheckedAt") } }
 }
 
-/// Updates without going online: the app never contacts a server. The menu opens the site's update page in
-/// the browser (only the version and menu language are in its address), and some time after this build (or
-/// after the last check) the menu and the icon remind that a newer version may be out. The build date is
+/// Updates: the app goes online only when the user clicks «Check for updates…» (updater.swift: update.json on
+/// klbk.github.io, the download from github.com); nothing typed and no personal data is ever sent. «What's new»
+/// opens the site's update page (only the version and menu language are in its address), and some time after
+/// this build (or after the last check) the menu and the icon remind that a newer version may be out. The build date is
 /// written into Info.plist by build.sh. The site's update page: says whether a newer version is out, what's
 /// new and how to update, in the menu language.
 func updatePageURL() -> URL {
@@ -309,7 +310,7 @@ final class Engine {
 
     var active: Bool { settings.enabled && !frontIsGame && !settings.excluded.contains(frontBundle) }
 
-    func reset() { word = []; lastWord = []; trailing = 0; before = [] }
+    func reset() { word = []; lastWord = []; trailing = 0; before = []; lastCycled = []; lastCycledLang = nil }
 
     func layout(_ lang: String?) -> Layout? { layouts.first { $0.lang == lang } }
     func index(_ lang: String?) -> Int { layouts.firstIndex { $0.lang == lang } ?? 0 }
@@ -390,7 +391,7 @@ final class Engine {
             } else if !lastWord.isEmpty { trailing += 1 }
         default:
             if codes.contains(code) {
-                if word.isEmpty { before = lastWord.count == 1 && trailing == 1 ? lastWord : [] }
+                if word.isEmpty { before = lastWord.count == 1 && trailing == 1 ? lastWord : []; lastCycled = []; lastCycledLang = nil }
                 if trailing > 0 || !lastWord.isEmpty { lastWord = []; trailing = 0 }
                 var len = 0
                 var buf = [UniChar](repeating: 0, count: 4)
