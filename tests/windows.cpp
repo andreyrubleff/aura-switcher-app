@@ -154,6 +154,16 @@ int wmain(int argc, wchar_t** argv) {
         wstring got = run(L"привіт", layouts[1], layouts[2]);
         if (got != L"привіт\x01") { mustFail++; printf("MUST FAIL (RU,UK,EN order): привіт -> %s\n", got.empty() ? "unchanged" : utf8(got).c_str()); }
     }
+    // a Ukrainian name typed in the Russian layout, with no Ukrainian dictionary (Windows has none):
+    // needs the Russian spell checker to say «вынницею» isn't Russian. Russian words stay.
+    if (dictionaryWorks(layouts[0].locale)) {
+        wstring got = run(L"вінницею", layouts[1], layouts[0]);
+        if (got != L"вінницею\x01") { mustFail++; printf("MUST FAIL (RU,UK,EN): вінницею in RU -> %s\n", got.empty() ? "unchanged" : utf8(got).c_str()); }
+        for (auto w : {L"привет", L"выписка", L"вынести"}) {
+            wstring k = run(w, layouts[0], layouts[0]);
+            if (!k.empty()) { mustFail++; printf("MUST FAIL (RU,UK,EN): %s in RU -> %s\n", utf8(w).c_str(), utf8(k).c_str()); }
+        }
+    } else printf("skipped (no Russian spell checker): вінницею in RU\n");
 
     std::string out;
     for (auto& r : results) {

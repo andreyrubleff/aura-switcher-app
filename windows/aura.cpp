@@ -457,7 +457,8 @@ static bool dictionaryWorks(const wstring& locale) {
         if (l.locale != locale) continue;
         // nonsense from the layout's own letters (keys like Q or Z may type several characters elsewhere)
         // only the layout's own script (a Cyrillic layout may also type a Latin letter the spell check skips)
-        std::set<wchar_t> set, own; for (auto& kv : l.toChar) if (IsCharAlphaW(kv.second)) { set.insert(kv.second); if (kv.second >= 0x250) own.insert(kv.second); }
+        // lower case only: Windows spell checking skips ALL-CAPS words, so «AAAAAAA» always passes
+        std::set<wchar_t> set, own; for (auto& kv : l.toChar) if (IsCharAlphaW(kv.second) && IsCharLowerW(kv.second)) { set.insert(kv.second); if (kv.second >= 0x250) own.insert(kv.second); }
         vector<wchar_t> letters = own.size() >= 3 ? vector<wchar_t>(own.begin(), own.end()) : vector<wchar_t>(set.begin(), set.end());
         if (letters.size() >= 3) {
             wstring a(7, letters[0]), b; for (int i = 0; i < 7; i++) b += letters[1 + i % 2];
@@ -597,16 +598,24 @@ static int autoFixTarget(const vector<Key>& keys) {
         int tier = 0;
         if (S.isUserWord(t)) tier = 4;  // the user's own word («скілі»)
         else if (isLatin(t) && !isLatin(typed) && isCode(t, layouts[j].locale)) tier = 3;
-        else if (dictionaryWorks(layouts[j].locale)) {
-            // without the typed language's dictionary, also ask the models which side looks real;
-            // close languages in one script (Belarusian ↔ Russian) need the stricter margin
-            double need = isCyrillic(typed) && isCyrillic(t) ? kMarginCyrillic : kMarginForDictWord;
-            if (isWord(t, layouts[j].locale) && (curDict || m >= need)) tier = 2;
-            // slang the dictionary doesn't know («гуглити»): long, another script, clearly typical of the language
-            else if (t.size() >= 5 && isLatin(typed) != isLatin(t) && m >= kMarginNeeded) tier = 1;
-        } else if (const LangModel* lm = model(layouts[j].locale)) {
-            // no dictionary there: a frequent word, or clearly more typical than what was typed
-            if (lm->has(t)) tier = 2; else if (m >= kMarginNeeded) tier = 1;
+        else {
+            if (dictionaryWorks(layouts[j].locale)) {
+                // without the typed language's dictionary, also ask the models which side looks real;
+                // close languages in one script (Belarusian ↔ Russian) need the stricter margin
+                double need = isCyrillic(typed) && isCyrillic(t) ? kMarginCyrillic : kMarginForDictWord;
+                if (isWord(t, layouts[j].locale) && (curDict || m >= need)) tier = 2;
+                // slang the dictionary doesn't know («гуглити»): long, another script, clearly typical of the language
+                else if (t.size() >= 5 && isLatin(typed) != isLatin(t) && m >= kMarginNeeded) tier = 1;
+            }
+            // the model's evidence counts too (a dictionary only adds certainty): a frequent word,
+            // or clearly more typical than what was typed
+            if (const LangModel* lm = model(layouts[j].locale)) {
+                if (lm->has(t)) tier = std::max(tier, 2); else if (m >= kMarginNeeded) tier = std::max(tier, 1);
+            }
+            // Russian layout, not a Russian word, and the same keys give letters only Ukrainian has
+            // («вынницею» → «вінницею»): the Ukrainian side only has to look more typical
+            if (!tier && curDict && isCyrillic(typed) && isCyrillic(t) && m > 0 && curLoc.compare(0, 2, L"ru") == 0 &&
+                layouts[j].locale.compare(0, 2, L"uk") == 0 && t.find_first_of(L"іїєґІЇЄҐ") != wstring::npos) tier = 1;
         }
         if (tier > bestTier || (tier && tier == bestTier && m > bestM)) { best = j; bestTier = tier; bestM = m; }
     }
