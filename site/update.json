@@ -1,12 +1,12 @@
 {
- "version": "0.9.3",
- "mac": "https://github.com/klbk/aura-switcher/releases/download/v0.9.3-beta/AURA-Switcher-mac.zip",
+ "version": "0.9.4",
+ "mac": "https://github.com/klbk/aura-switcher/releases/download/v0.9.4-beta/AURA-Switcher-mac.zip",
  "win-x64": {
-  "url": "https://github.com/klbk/aura-switcher/releases/download/v0.9.3-beta/AURA-Switcher-windows-x64.exe",
-  "sha256": "c5335cc93c6df507098fd7fecc8414fcb6e6f25f6b5db4d5136e9c6d836659e2"
+  "url": "https://github.com/klbk/aura-switcher/releases/download/v0.9.4-beta/AURA-Switcher-windows-x64.exe",
+  "sha256": "6e7021b942dd391c313b860fe81a57649df881cea1058a860b1ef5bb85252ef3"
  },
  "win-arm64": {
-  "url": "https://github.com/klbk/aura-switcher/releases/download/v0.9.3-beta/AURA-Switcher-windows-arm64.exe",
-  "sha256": "d215043e7d8906deb793bebdc4a67e078e7f531833901ace0284002f87bd1ec9"
+  "url": "https://github.com/klbk/aura-switcher/releases/download/v0.9.4-beta/AURA-Switcher-windows-arm64.exe",
+  "sha256": "75a1b4cb18419f6e7a73e5c418f63d273577ee49e67e573dee6a836002e14827"
  }
 }
