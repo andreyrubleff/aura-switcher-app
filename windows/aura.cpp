@@ -582,7 +582,15 @@ static int autoFixTarget(const vector<Key>& keys) {
     bool curDict = dictionaryWorks(curLoc);
     if (!curDict && !model(curLoc)) return -1;  // typed in a language we can't check at all: may well be right
     wstring typed = layouts[cur].text(keys);
-    if (S.isUserWord(typed) || (curDict ? isWord(typed, curLoc) : model(curLoc)->has(typed))) return -1;
+    if (S.isUserWord(typed)) return -1;
+    // Windows dictionaries accept many short letter groups («kai», «zum», «еру»): a short word the dictionary
+    // allows but the model doesn't know as frequent is weak — it still yields to a frequent word elsewhere
+    const LangModel* curLm = model(curLoc);
+    bool weak = false;
+    if (curDict ? isWord(typed, curLoc) : curLm->has(typed)) {
+        weak = curDict && typed.size() <= 4 && curLm && !curLm->has(typed);
+        if (!weak) return -1;
+    }
     // every other layout is a candidate; take the strongest kind of evidence, not the first layout in the
     // list: with RU, UK, EN in that order «ghbdsn» must become the Ukrainian word «привіт», not the
     // Russian look-alike «привыт» that only passes on letter statistics
@@ -617,6 +625,7 @@ static int autoFixTarget(const vector<Key>& keys) {
             if (!tier && curDict && isCyrillic(typed) && isCyrillic(t) && m > 0 && curLoc.compare(0, 2, L"ru") == 0 &&
                 layouts[j].locale.compare(0, 2, L"uk") == 0 && t.find_first_of(L"іїєґІЇЄҐ") != wstring::npos) tier = 1;
         }
+        if (weak) { const LangModel* lm = model(layouts[j].locale); if (!lm || !lm->has(t)) tier = 0; }
         if (tier > bestTier || (tier && tier == bestTier && m > bestM)) { best = j; bestTier = tier; bestM = m; }
     }
     return best;
