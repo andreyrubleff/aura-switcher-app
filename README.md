@@ -110,7 +110,7 @@ Archive for other Macs: `./build.sh --release` → `dist/AURA-Switcher-<version>
 
 ## Thanks
 
-- **Andrew Vrublevskyi** — beta testing and the code review of 0.9.2 that made the one-click update safer (0.9.3).
+- **Andrew Vrublevskyi** ([@andrewvrublevskyi](https://github.com/andrewvrublevskyi)) — beta testing and the code review of 0.9.2 that made the one-click update safer (0.9.3).
 
 ---
 🇺🇦 AURA Switcher — made in Ukraine.
