@@ -20,9 +20,22 @@ static wstring wide(const std::string& s) {
 
 static wstring root;
 static std::map<wstring, Layout> cache;
+// layouts the test loads stay in the user's session (and in AURA's double ⇧ cycle) — unload them on exit
+static std::vector<HKL> loadedByTest;
+static void unloadTestLayouts() { for (HKL h : loadedByTest) UnloadKeyboardLayout(h); }
+static bool sessionHas(HKL h) {
+    HKL list[64]; int n = GetKeyboardLayoutList(64, list);
+    for (int i = 0; i < n; i++) if (list[i] == h) return true;
+    return false;
+}
 static Layout& layout(const wchar_t* klid) {  // e.g. "00000422" = Ukrainian
     auto it = cache.find(klid); if (it != cache.end()) return it->second;
+    HKL before[64]; int nb = GetKeyboardLayoutList(64, before);
     HKL h = LoadKeyboardLayoutW(klid, KLF_NOTELLSHELL);
+    if (h && std::find(before, before + nb, h) == before + nb && sessionHas(h)) {
+        if (loadedByTest.empty()) atexit(unloadTestLayouts);
+        loadedByTest.push_back(h);
+    }
     Layout L; if (!h || !buildLayout(h, L)) { printf("no layout %s\n", utf8(klid).c_str()); exit(2); }
     return cache[klid] = L;
 }
