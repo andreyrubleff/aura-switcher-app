@@ -27,7 +27,7 @@ const SEO = {
   it: { title: "AURA Switcher — alternativa gratuita a Punto Switcher per Mac e Windows",
     desc: "Cambio automatico del layout di tastiera: le parole digitate nel layout sbagliato vengono corrette dopo lo spazio. Alternativa gratuita e open source a Punto Switcher e Caramba Switcher.",
     altH: "Un’alternativa gratuita a Punto Switcher",
-    altP: "Cerchi un sostituto di Punto Switcher o Caramba Switcher? AURA Switcher riconosce il testo scritto nel layout di tastiera sbagliato e lo corregge da solo — gratis, open source, senza pubblicità, non invia nulla online. Per macOS e Windows." },
+    altP: "Cerchi un sostituto di Punto Switcher o Caramba Switcher? AURA Switcher riconosce il testo scritto con il layout di tastiera sbagliato e lo corregge da sé: gratis, open source, senza pubblicità e senza inviare nulla online. Per macOS e Windows." },
   pt: { title: "AURA Switcher — alternativa gratuita ao Punto Switcher para Mac e Windows",
     desc: "Troca automática do layout do teclado: palavras digitadas no layout errado são corrigidas após o espaço. Alternativa gratuita e de código aberto ao Punto Switcher e Caramba Switcher.",
     altH: "Alternativa gratuita ao Punto Switcher",

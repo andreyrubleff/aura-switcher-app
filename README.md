@@ -111,6 +111,7 @@ Archive for other Macs: `./build.sh --release` → `dist/AURA-Switcher-<version>
 ## Thanks
 
 - **Andrew Vrublevskyi** ([@andreyrubleff](https://github.com/andreyrubleff)) — beta testing and the code review of 0.9.2 that made the one-click update safer (0.9.3).
+- **mrCabez** ([@mrCabez](https://github.com/mrCabez)) — Italian translation proofread by a native speaker (menu, site, update page).
 
 ---
 🇺🇦 AURA Switcher — made in Ukraine.

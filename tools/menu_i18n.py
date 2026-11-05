@@ -231,37 +231,37 @@ it Italiano
 Attivo
 Correzione automatica
 Suono
-⚠︎ Concedi accesso: Accessibilità
+⚠︎ Concedi l’accesso: Accessibilità
 App:
-Non funzionare in questa app
+Disattiva in questa app
 Gioco — AURA in pausa
 Lingua per questa app
 Nessuna associazione
-Eccezioni
-Non funzionare in (app recenti)
+Esclusioni
+Disattiva in (app recenti)
 Lingue associate
 Vuoto
 Apri al login
 Le mie parole…
 AURA Switcher — le mie parole
-AURA Switcher considera corrette queste parole: non le cambia mai e le corregge se digitate con il layout sbagliato. Separale con virgole.
+AURA Switcher considera corrette queste parole: non le modifica mai e le corregge se le digiti con il layout sbagliato. Separale con una virgola.
 Salva
 Annulla
 Lingua del menu
 Sistema
-Doppio ⇧ — converti parola/selezione
+Doppio ⇧ — converti parola o selezione
 Segnala un problema…
 Cosa è successo e in quale app:
 Controlla aggiornamenti…
-⬆︎ Potrebbe esserci un aggiornamento — controlla
+⬆︎ Potrebbe essere disponibile un aggiornamento — verifica
 Sostieni AURA Switcher ☕
 Esci
-È uscita AURA Switcher {v}
+È disponibile AURA Switcher {v}
 Hai l’ultima versione
 Novità
 Aggiorna
 Più tardi
-Aggiornamento automatico non riuscito. Aprire il sito per scaricarla?
+Impossibile aggiornare automaticamente. Vuoi aprire il sito per scaricare l’aggiornamento?
 
 pt Português
 Ativado
