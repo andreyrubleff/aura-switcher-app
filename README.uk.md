@@ -110,7 +110,7 @@ AURA використовує **всі розкладки, увімкнені в
 
 ## Подяки
 
-- **Andrew Vrublevskyi** ([@andrewvrublevskyi](https://github.com/andrewvrublevskyi)) — бета-тестування й рев'ю коду 0.9.2, завдяки якому оновлення в один клік стало безпечнішим (0.9.3).
+- **Andrew Vrublevskyi** ([@andreyrubleff](https://github.com/andreyrubleff)) — бета-тестування й рев'ю коду 0.9.2, завдяки якому оновлення в один клік стало безпечнішим (0.9.3).
 
 ---
 🇺🇦 AURA Switcher — українська розробка.
